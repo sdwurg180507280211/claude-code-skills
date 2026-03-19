@@ -1,0 +1,23 @@
+{
+  "skill_name": "github-kb",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我想看看metersphere这个仓库的主要功能是什么",
+      "expected_output": "Should find metersphere in local directory, analyze it, and describe its main features",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "帮我下载 https://github.com/apache/kafka 这个repo到本地",
+      "expected_output": "Should clone kafka repo to /Users/zhaozhiwei/IdeaProjects and update CLAUDE.md",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "search github for spring boot microservices examples",
+      "expected_output": "Should use gh or curl to search GitHub and return relevant repositories",
+      "files": []
+    }
+  ]
+}
