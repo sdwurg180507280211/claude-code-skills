@@ -25,7 +25,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Available skills
-AVAILABLE_SKILLS=("spec-mode" "chrome-devtools" "github-kb" "skill-creator")
+AVAILABLE_SKILLS=("spec-mode" "github-kb" "skill-creator" "github-aliyun-deploy")
 
 print_banner() {
     echo ""
