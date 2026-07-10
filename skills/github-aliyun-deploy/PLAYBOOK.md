@@ -205,6 +205,19 @@ usermod -aG docker deployer
 > 只写 `0.0.0.0:8090` 会报 `invalid hostPort: "0.0.0.0:8090"`。
 > 多项目共用 ECS 时，宿主机端口要错开（见 2.5），安全组也要对新端口单独放行。
 
+> **踩坑 6：`apt-get update` 在 ECS 构建容器内卡死（5+ 分钟 CPU 0、无网络连接）**
+> Node/Next.js 项目若用 `node:*-bookworm-slim` 等 Debian/Ubuntu 基础镜像，且 `Dockerfile` 里有 `apt-get install`（如装 `python3 make g++` 给 better-sqlite3 编译），`apt-get update` 默认走 `deb.debian.org`，在 ECS 的 build 命名空间里经常卡死（宿主机能通，但构建容器内 DNS/网络不稳）。
+> 解决：`Dockerfile` 的 apt 步骤把源换阿里云镜像，并加 apt 缓存挂载：
+> ```dockerfile
+> RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+>     --mount=type=cache,target=/var/lib/apt/lists,sharing=locked \
+>     sed -i 's@deb.debian.org@mirrors.aliyun.com@g' /etc/apt/sources.list /etc/apt/sources.list.d/* 2>/dev/null; \
+>     apt-get update && apt-get install -y --no-install-recommends python3 make g++ \
+>   && rm -rf /var/lib/apt/lists/*
+> ```
+> 预验证：`docker run --rm --network=host node:22-bookworm-slim bash -c "sed -i 's@deb.debian.org@mirrors.aliyun.com@g' /etc/apt/sources.list.d/*; apt-get update"` 应在数秒内拉完。
+> **不要再部署中途 `docker buildx prune -f`**：会清空全部构建缓存，迫使下次构建从零跑，恰好暴露上述网络问题。
+
 ### 4.3 项目目录 + 真实 .env（凭据只放这里）
 ```bash
 mkdir -p /opt/{{PROJECT}} && chown -R deployer:deployer /opt/{{PROJECT}}
@@ -310,6 +323,7 @@ certbot --nginx -d {{你的域名}}
 | 健康检查失败 | 服务没暴露 `/api/health` | 在代码加该路由返回 200 |
 | 想换凭据 | .env 改了没生效 | 直接在 `/opt/{{PROJECT}}/.env` 改值，再 push 一次触发重部署 |
 | 构建阶段 pip 卡死 | ECS 直连 PyPI 超时 | Dockerfile `pip install` 加阿里云源 `-i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com` |
+| 构建阶段 `apt-get update` 卡死 | Debian/Ubuntu 基础镜像直连 `deb.debian.org` 在 ECS 构建容器内不稳 | Dockerfile apt 步骤先 `sed` 换成 `mirrors.aliyun.com`（见踩坑 6） |
 | compose 报 `invalid hostPort` | BIND_ADDR 缺容器端口 | 变量写全三段 `0.0.0.0:宿主端口:容器端口`（如 `0.0.0.0:8090:8081`） |
 
 ---
