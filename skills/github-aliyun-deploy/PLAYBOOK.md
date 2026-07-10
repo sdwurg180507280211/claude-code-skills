@@ -229,6 +229,28 @@ usermod -aG docker deployer
 > 首次仍慢，但之后依赖与构建缓存都命中，部署回到分钟级。
 > **构建发生在 ECS 本地**（不是本地机器构建再传），重应用首构建 10–20 分钟属正常，别误判为卡死。
 
+> **踩坑 8：无 lockfile + `npm install` → 镜像不可复现**
+> 只提交 `package.json`、用 `npm install` 时，间接依赖会随时间漂移；更糟的是 CI（GitHub 默认源）与 Docker（npmmirror）可能解析出不同依赖树，同一份代码重建得到不同镜像。
+> 解决：提交 `package-lock.json`，两端统一 `npm ci`。
+> ```bash
+> npm install --package-lock-only --registry https://registry.npmjs.org  # 生成 lockfile（resolved 指向官方源，最通用）
+> ```
+> ```dockerfile
+> COPY package.json package-lock.json ./
+> RUN --mount=type=cache,target=/root/.npm \
+>     npm ci --no-audit --no-fund --registry https://registry.npmmirror.com
+> ```
+> `npm ci` 会按 lockfile 精确安装；即使 Docker 用 npmmirror，也会自动改写默认源主机并用 integrity 校验，与 CI（官方源）得到**完全一致**的依赖树。
+
+> **生产健壮性：部署前用 SQLite 在线一致性备份，别直接 `cp *.db*`**
+> WAL 模式下 `cp sunyun.db sunyun.db-wal sunyun.db-shm` 若恰逢写入，三文件可能不是同一时间点 → 恢复风险。
+> 正解：部署前用**运行中的旧容器**里的 `better-sqlite3` 调 `.backup()` 生成单点快照（写到挂载卷再 mv 到 backups/）：
+> ```bash
+> docker exec -e BK="/app/data/snap.bak" {{PROJECT}} \
+>   node -e 'const D=require("better-sqlite3");const db=new D("/app/data/app.db",{readonly:true,fileMustExist:true});db.backup(process.env.BK).then(()=>{db.close();process.exit(0)}).catch(e=>{console.error(e);process.exit(1)})'
+> ```
+> 仅当无运行容器（库静止、直接 cp 即一致）或在线备份失败时才回退文件复制。产出是单一 `.db`（WAL 已合并），比三文件分拷更可靠。
+
 ### 4.3 项目目录 + 真实 .env（凭据只放这里）
 ```bash
 mkdir -p /opt/{{PROJECT}} && chown -R deployer:deployer /opt/{{PROJECT}}
@@ -336,6 +358,8 @@ certbot --nginx -d {{你的域名}}
 | 构建阶段 pip 卡死 | ECS 直连 PyPI 超时 | Dockerfile `pip install` 加阿里云源 `-i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com` |
 | 构建阶段 `apt-get update` 卡死 | Debian/Ubuntu 基础镜像直连 `deb.debian.org` 在 ECS 构建容器内不稳 | Dockerfile apt 步骤先 `sed` 换成 `mirrors.aliyun.com`（见踩坑 6） |
 | 构建阶段 `npm install` 卡死 | 重依赖 Node 项目直连 registry.npmjs.org 慢 | Dockerfile `npm install` 加 `--registry https://registry.npmmirror.com` + npm 缓存挂载（见踩坑 7） |
+| 同码重建镜像不一致 / CI 与 Docker 依赖树不同 | 无 lockfile、用 npm install、两端不同源 | 提交 `package-lock.json`，两端统一 `npm ci`（见踩坑 8） |
+| 备份恢复后 DB 损坏/不一致 | WAL 下直接 cp db/-wal/-shm 非同一时间点 | 部署前用运行中容器的 `better-sqlite3 .backup()` 做在线一致性备份 |
 | compose 报 `invalid hostPort` | BIND_ADDR 缺容器端口 | 变量写全三段 `0.0.0.0:宿主端口:容器端口`（如 `0.0.0.0:8090:8081`） |
 
 ---
