@@ -20,7 +20,10 @@ description: 把任意项目配成「本地/手机改代码 → push GitHub main
 ## 执行流程（按需跳步，已存在的产物跳过）
 
 ### 1. 容器化（本地）
-- `Dockerfile`：基础镜像 `node:20-alpine`（或对应语言），`USER` 非 root，`EXPOSE 8080`，`CMD` 启动服务。
+- `Dockerfile`：基础镜像按语言选，`USER` 非 root，`EXPOSE 8080`，`CMD` 启动服务。
+  - **Node 轻量项目**（无原生编译依赖）：`node:20-alpine`。
+  - **Node 含原生模块**（如 `better-sqlite3`、需 python/make/g++ 编译）：改用 `node:*-bookworm-slim`，`npm install` 走国内源 `registry.npmmirror.com`（见踩坑 C）。
+  - **Python 后端**用 `python:3.13-slim` + `uvicorn` 起 `:8000`；`pip install` **务必加阿里云 PyPI 镜像源**（`-i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com`），否则 ECS 直连 PyPI 会卡死。
 - `docker-compose.yml`：服务名 = `{{PROJECT}}`，`ports: "${BIND_ADDR:-127.0.0.1:8080}:8080"`（只绑内网，由 nginx 反代），`restart: unless-stopped`，挂载 `./data`。
 - `.dockerignore`：排除 `node_modules dist .git .github docs scripts .env* data/* .DS_Store *.log`。
 - `.env.example`：只放占位（如 `ADMIN_TOKEN=__强随机值__`）。
@@ -37,6 +40,10 @@ description: 把任意项目配成「本地/手机改代码 → push GitHub main
   - Alibaba Cloud Linux/CentOS：先加阿里云 docker-ce 源再 `yum install -y docker-ce docker-compose-plugin`（避免 compose 插件缺失）。
 - **踩坑 A — Docker 起不来（socket activation）**：`systemctl enable --now docker.socket` 再 `systemctl restart docker`。
 - **踩坑 B — 拉镜像超时**：写 `/etc/docker/daemon.json` 配 `registry-mirrors`（daocloud / 163 / baidu），`systemctl restart docker`。
+- **踩坑 C — 构建阶段卡死（npm / apt 在 ECS 直连慢）**：
+  - **npm 重依赖项目**（如 Next.js）：`RUN npm install` 直连 `registry.npmjs.org` 在 ECS 上极慢（实测 8s/请求），几百个包基本跑不完。解决：Dockerfile 加 `--registry https://registry.npmmirror.com` + BuildKit 缓存挂载（`RUN --mount=type=cache,target=/root/.npm npm install --registry https://registry.npmmirror.com`）。
+  - **Debian/Ubuntu 基础镜像 `apt-get update`**：Dockerfile 里若有 `apt-get install`（如给 `better-sqlite3` 装 `python3 make g++`），默认源 `deb.debian.org` 在 ECS 构建容器内常卡死。解决：先 `sed -i 's@deb.debian.org@mirrors.aliyun.com@g'` 再 `apt-get update`，并加 apt 缓存挂载。
+  - **关键提醒：构建发生在 ECS 上，不是本地。** Runner 在服务器本地 `docker compose build`，所以**重应用首构建无缓存会跑 10–20 分钟，属正常、不是卡死**；中途不要 `docker buildx prune -f`，否则清空缓存强制全量重建，反而暴露网络问题。
 - 建 `/opt/{{PROJECT}}/.env`（真实凭据，`chmod 600`）。
 - **注册 Runner（核心）**：仓库 `Settings → Actions → Runners → New self-hosted runner → Linux x64`，复制命令在 ECS 以 `deployer` 执行。
   - **优先在 ECS 上直接 `curl` 下载 Runner 包**；必须本机传的话用 `rsync -P --partial`（scp 大包会截断）。
@@ -98,6 +105,9 @@ services:
 | 502 | 容器未起/端口错 | `docker compose --env-file /opt/{{PROJECT}}/.env logs` |
 | 健康检查失败 | 无 `/api/health` | 代码加该路由返回 200 |
 | 换凭据 | .env 未生效 | 改 `/opt/{{PROJECT}}/.env` 再 push 触发重部署 |
+| 构建阶段 npm 卡死 | ECS 直连 registry.npmjs.org 慢 | Dockerfile `npm install` 加 `--registry https://registry.npmmirror.com` + npm 缓存挂载（见踩坑 C） |
+| 构建阶段 apt-get 卡死 | Debian 基础镜像直连 deb.debian.org | Dockerfile apt 步骤 `sed` 换 `mirrors.aliyun.com`（见踩坑 C） |
+| 首次构建极慢（10+ 分钟） | 无缓存 + ECS 小机器 | 正常；构建在 ECS 本地跑，别中途 `docker buildx prune -f` |
 
 ## 给手机端 AI 的提示词模板
 ```

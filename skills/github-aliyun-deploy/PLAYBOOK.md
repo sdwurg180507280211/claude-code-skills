@@ -197,7 +197,7 @@ usermod -aG docker deployer
 > 改完 `systemctl restart docker`。
 
 > **踩坑 4：Python 项目 `pip install` 在 ECS 直连 PyPI 卡死（7 分钟无进展，CPU 仅 4 秒）**
-> Node 项目用 npm 走的是 registry 或已配镜像，从没踩过；但 `pip` 默认直连 pypi.org 在 ECS 上极慢。
+> Node 项目若依赖少（如纯 Express）一般能跑；但**重依赖项目（Next.js 等）直连 `registry.npmjs.org` 同样会卡死**（见踩坑 7），需加 npmmirror 源。
 > 解决：`Dockerfile` 的 `pip install` 加阿里云源：`-i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com`（见 2.1b）。
 
 > **踩坑 5：`BIND_ADDR` 缺容器端口 → compose 报 `invalid hostPort`**
@@ -217,6 +217,17 @@ usermod -aG docker deployer
 > ```
 > 预验证：`docker run --rm --network=host node:22-bookworm-slim bash -c "sed -i 's@deb.debian.org@mirrors.aliyun.com@g' /etc/apt/sources.list.d/*; apt-get update"` 应在数秒内拉完。
 > **不要再部署中途 `docker buildx prune -f`**：会清空全部构建缓存，迫使下次构建从零跑，恰好暴露上述网络问题。
+
+> **踩坑 7：npm 重依赖项目 `npm install` 在 ECS 直连 `registry.npmjs.org` 卡死**
+> Next.js 这类几百个包的项目，`RUN npm install` 默认源在 ECS 上极慢（实测单请求 8s、整体跑不完）。
+> 解决：Dockerfile 的 npm 步骤走 npmmirror 并加缓存挂载：
+> ```dockerfile
+> RUN --mount=type=cache,target=/root/.npm \
+>     npm install --no-audit --no-fund --registry https://registry.npmmirror.com
+> RUN --mount=type=cache,target=/app/.next/cache npm run build
+> ```
+> 首次仍慢，但之后依赖与构建缓存都命中，部署回到分钟级。
+> **构建发生在 ECS 本地**（不是本地机器构建再传），重应用首构建 10–20 分钟属正常，别误判为卡死。
 
 ### 4.3 项目目录 + 真实 .env（凭据只放这里）
 ```bash
@@ -324,6 +335,7 @@ certbot --nginx -d {{你的域名}}
 | 想换凭据 | .env 改了没生效 | 直接在 `/opt/{{PROJECT}}/.env` 改值，再 push 一次触发重部署 |
 | 构建阶段 pip 卡死 | ECS 直连 PyPI 超时 | Dockerfile `pip install` 加阿里云源 `-i https://mirrors.aliyun.com/pypi/simple/ --trusted-host mirrors.aliyun.com` |
 | 构建阶段 `apt-get update` 卡死 | Debian/Ubuntu 基础镜像直连 `deb.debian.org` 在 ECS 构建容器内不稳 | Dockerfile apt 步骤先 `sed` 换成 `mirrors.aliyun.com`（见踩坑 6） |
+| 构建阶段 `npm install` 卡死 | 重依赖 Node 项目直连 registry.npmjs.org 慢 | Dockerfile `npm install` 加 `--registry https://registry.npmmirror.com` + npm 缓存挂载（见踩坑 7） |
 | compose 报 `invalid hostPort` | BIND_ADDR 缺容器端口 | 变量写全三段 `0.0.0.0:宿主端口:容器端口`（如 `0.0.0.0:8090:8081`） |
 
 ---
