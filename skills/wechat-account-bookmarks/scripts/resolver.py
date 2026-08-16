@@ -9,7 +9,6 @@ import re
 import shutil
 import subprocess
 import sys
-import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import parse_qs, unquote, urlsplit
@@ -44,6 +43,13 @@ FIELDS = [
 
 RATE_LIMIT_MARKERS = ["访问过于频繁", "操作频繁", "环境异常", "rate limit", "频控"]
 SESSION_MARKERS = ["session expired", "dashboard session expired", "200003"]
+EXTRACTOR_STATUS_BY_CODE = {
+    1004: "rate_limited",
+    1006: "migrated",
+    2012: "inactive",
+    2013: "inactive",
+    2015: "migrated",
+}
 
 
 def now_iso() -> str:
@@ -111,6 +117,8 @@ def _classify_error(text: str) -> str:
         return "rate_limited"
     if any(marker.lower() in lower for marker in SESSION_MARKERS):
         return "session_expired"
+    if "no published articles found" in lower:
+        return "no_article"
     if "ambiguous or not found" in lower or "not found" in lower:
         return "not_found"
     return "error"
@@ -125,18 +133,30 @@ def extract_with_upstream(
     node = shutil.which("node")
     if not node:
         return {"ok": False, "status": "error", "message": "缺少 node 命令"}
-    proc = _run(
-        [node, str(adapter_script), str(upstream.extractor_script), article_url],
-        timeout=timeout,
-    )
+    try:
+        proc = _run(
+            [node, str(adapter_script), str(upstream.extractor_script), article_url],
+            timeout=timeout,
+        )
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "status": "error", "message": "upstream extractor timed out"}
+    except OSError as exc:
+        return {"ok": False, "status": "error", "message": f"启动 upstream extractor 失败：{exc}"}
+
     payload = _last_json_line(proc.stdout)
     if proc.returncode == 0 and payload.get("ok") is True:
         return payload
+
+    code = payload.get("code")
+    try:
+        code_int = int(code) if code is not None else None
+    except (TypeError, ValueError):
+        code_int = None
     combined = "\n".join([proc.stdout, proc.stderr, str(payload.get("message", ""))])
     return {
         "ok": False,
-        "status": _classify_error(combined),
-        "code": payload.get("code"),
+        "status": EXTRACTOR_STATUS_BY_CODE.get(code_int, _classify_error(combined)),
+        "code": code_int,
         "message": payload.get("message") or proc.stderr.strip() or "upstream extractor failed",
     }
 
@@ -151,6 +171,7 @@ def discover_with_upstream(
 ) -> dict:
     digest = hashlib.sha256(account_name.encode("utf-8")).hexdigest()[:16]
     output = work_dir / f"{digest}.csv"
+    qr_path = session_path.with_name("wechat-login-qr.jpg")
     cmd = [
         sys.executable,
         str(upstream.discover_script),
@@ -162,10 +183,18 @@ def discover_with_upstream(
         str(output),
         "--session",
         str(session_path),
+        "--qr-path",
+        str(qr_path),
         "--page-delay",
         "0.5",
     ]
-    proc = _run(cmd, timeout=timeout)
+    try:
+        proc = _run(cmd, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "status": "error", "message": "upstream archive discovery timed out"}
+    except OSError as exc:
+        return {"ok": False, "status": "error", "message": f"启动 upstream archive 失败：{exc}"}
+
     summary = _last_json_line(proc.stdout)
     if proc.returncode != 0:
         combined = "\n".join([proc.stdout, proc.stderr])
@@ -328,6 +357,10 @@ def resolve_entry(
                 )
                 _finish_identity(result, str(extracted["account_biz"]), "upstream_archive+extractor")
                 break
+            if extracted.get("status") == "rate_limited":
+                result["identity_status"] = "rate_limited"
+                result["error"] = extracted.get("message", "")
+                return result
         if result["identity_status"] != "resolved":
             result["identity_status"] = "biz_not_found"
             result["error"] = "上游历史列表存在，但候选文章未能解析出 biz"
