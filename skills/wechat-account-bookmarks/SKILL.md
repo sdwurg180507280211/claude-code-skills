@@ -1,6 +1,6 @@
 ---
 name: wechat-account-bookmarks
-description: 批量把微信公众号名称、历史文章 URL 或已知 biz 转换为可直接导入 Edge/Chrome 的公众号主页书签。优先复用 freestylefly 的 wechat-article-archive-skill 与 wechat-article-extractor-skill，不重复实现微信搜索、文章历史和复杂页面解析。适用于“恢复微信公众号快捷方式”“Excel 批量生成公众号书签”“公众号名称跳转主页”等任务；不绕过登录、验证码或微信风控。
+description: 批量把微信公众号名称、历史文章 URL 或已知 biz 转换为可直接导入 Edge/Chrome 的公众号主页或文章书签。优先复用 freestylefly 的 wechat-article-archive-skill 与 wechat-article-extractor-skill，不重复实现微信搜索、文章历史和复杂页面解析。适用于“恢复微信公众号快捷方式”“Excel 批量生成公众号书签”“公众号名称跳转主页或文章”等任务；不绕过登录、验证码或微信风控。
 ---
 
 # 微信公众号批量书签生成
@@ -12,36 +12,54 @@ description: 批量把微信公众号名称、历史文章 URL 或已知 biz 转
 微信侧复杂能力直接复用上游：
 
 - `freestylefly/wechat-article-archive-skill`：公众号精确名称 → `searchbiz` → `fakeid` → 历史文章列表。
-- `freestylefly/wechat-article-extractor-skill`：文章 URL/HTML → `account_name` / `account_alias` / `account_id` / `account_biz`，并处理迁移、注销、屏蔽、频控等页面异常。
+- `freestylefly/wechat-article-extractor-skill`：文章 URL/HTML → `account_name` / `account_alias` / `account_id` / `account_biz`，并处理迁移、注销、屏蔽等页面异常。
 
-本 Skill 不再维护自己的微信后台搜索客户端或完整文章解析器。
+本 Skill 不维护自己的微信后台搜索客户端或完整文章解析器。
+
+## 核心成功标准
+
+不要把“拿到 `biz`”当作唯一成功标准。最终目标是得到一个已经与输入公众号身份对应的可点击目标：
+
+```text
+target_type = homepage | article
+target_url  = 最终写入 bookmarks.html 的 URL
+```
+
+优先级：
+
+```text
+可信 biz
+→ 公众号主页 target
+
+没有主页，但已有可信公众号文章
+→ 文章 target
+```
 
 ## 解析优先级
-
-始终按成本最低、身份最确定的顺序处理：
 
 ```text
 输入 biz
   ↓ 没有
 输入微信公众号文章 URL
-  ↓ URL 本身没有 __biz
-上游 wechat-article-extractor-skill
-  ↓ 仍无身份线索
+  ↓
+上游 wechat-article-extractor-skill 核对公众号名称
+  ↓ 没有 URL
 公众号名称
   ↓
-上游 wechat-article-archive-skill
+上游 wechat-article-archive-skill 精确搜索
   ↓
 fakeid + 候选文章
   ↓
 必要时再调用 extractor
 ```
 
-因此：
+规则：
 
-- 已知 `biz` 时不访问微信后台。
-- URL 已含 `__biz` 时不安装/调用上游解析器。
-- 只有纯名称输入才进入微信公众平台扫码搜索流程。
-- 不做模糊匹配，不猜测相似公众号。
+- 已知 `biz` 时不访问微信后台；只把它当身份锚点，不把 Excel 名称冒充成已核验的当前公众号名称。
+- 文章 URL 即使自带 `__biz`，也要通过 extractor 核对文章所属公众号名称。
+- URL 解析出的公众号名称与 Excel 名称不一致时：`identity_status=pending_review`，`error_code=article_name_mismatch`，不得生成错误书签。
+- 纯名称路径仍要求上游 archive skill 做精确名称匹配，不做模糊猜测。
+- 如果精确账号已经找到，且有可信文章 URL，但没有 `biz`，可以生成 `target_type=article` 的文章书签。
 
 ## 输入
 
@@ -53,9 +71,9 @@ fakeid + 候选文章
 快捷方式名称 | 文件夹结构 | URL | biz
 ```
 
-自动识别的 URL 列包括：`URL`、`链接`、`公众号链接`、`文章链接`、`历史链接`。
+自动识别 URL 列：`URL`、`链接`、`公众号链接`、`文章链接`、`历史链接`。
 
-自动识别的 biz 列包括：`__biz`、`biz`、`account_biz`。
+自动识别 biz 列：`__biz`、`biz`、`account_biz`。
 
 ## 输出
 
@@ -71,41 +89,78 @@ output/
 └── state.json
 ```
 
-书签默认目标：
+关键结果字段：
 
 ```text
-https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=<biz>&scene=124#wechat_redirect
+original_name
+current_name
+fakeid
+biz
+homepage_url
+fallback_article_url
+target_type
+target_url
+identity_status
+bookmark_status
+fallback_status
+resolved_by
+error_code
+error
 ```
 
-## 身份状态与书签状态必须分开
+`bookmark_review.csv` 必须包含：
 
-不要把“拿到 biz”直接等价为“桌面浏览器已验证可打开”。
+- 所有 `bookmark_status != direct_ok` 的已解析书签，包括默认的 `unverified`；
+- 所有 `fallback_status != present` 的已解析记录。
+
+这样不能出现“大量主页从未验证，但复核清单为空”的假象。
+
+## 状态
 
 `identity_status` 主要包括：
 
-- `resolved`
-- `not_found`
-- `biz_not_found`
-- `session_expired`
-- `rate_limited`
-- `error`
+```text
+resolved
+pending_review
+not_found
+no_article
+biz_not_found
+session_expired
+rate_limited
+inactive
+migrated
+error
+```
+
+`error_code` 用来区分具体原因，例如：
+
+```text
+article_name_mismatch
+article_name_unavailable
+article_identity_unverified
+exact_name_unresolved
+exact_name_not_found
+no_article
+session_expired
+upstream_error
+```
 
 `bookmark_status` 主要包括：
 
-- `unverified`：已生成主页 URL，但没有额外请求验证。
-- `direct_ok`：检测到明确公众号主页结构且名称匹配。
-- `requires_wechat`：需要微信客户端环境。
-- `verification`：出现安全验证/频控。
-- `inactive`：注销/屏蔽。
-- `migrated`：迁移提示。
-- `http_error`
-- `unknown`：HTTP 返回但无法证明是正常主页；禁止把它误报成成功。
-
-只有 `identity_status=resolved` 且存在 `biz + homepage_url` 才算身份解析成功。
+```text
+unverified
+direct_ok
+requires_wechat
+verification
+inactive
+migrated
+http_error
+unknown
+```
 
 ## 上游版本
 
-默认第一次真正需要上游能力时，自动缓存并固定到经过本 Skill 验证的版本：
+固定使用：
 
 ```text
 wechat-article-archive-skill
@@ -115,23 +170,19 @@ wechat-article-extractor-skill
 d8f74b8946065e64537f1ad39f962dbed86da3c7
 ```
 
-缓存目录默认：
+缓存目录：
 
 ```text
 ~/.cache/wechat-account-bookmarks/upstream/
 ```
 
-extractor 为 Node.js 项目，首次使用会执行其自己的 `npm ci --omit=dev`。
+首次使用 `git clone --no-checkout` 后必须显式 checkout 固定 commit；不能因为 `HEAD` 已等于目标 commit 就跳过 checkout，否则会留下空工作区。
 
-也可以通过：
+extractor 需要 Node.js/npm，首次使用会执行：
 
-```text
---archive-repo
---extractor-repo
---no-upstream-bootstrap
+```bash
+npm ci --omit=dev
 ```
-
-指定已经存在的上游仓库，不自动下载。
 
 ## 快速开始
 
@@ -148,29 +199,15 @@ python3 scripts/generate_bookmarks.py \
   --output-dir output
 ```
 
-如果 Excel 已有 URL：
+环境建议：
 
-```bash
-python3 scripts/generate_bookmarks.py \
-  --input /path/to/accounts.xlsx \
-  --name-column 快捷方式名称 \
-  --folder-column 文件夹结构 \
-  --url-column URL \
-  --output-dir output
-```
-
-如果已经有 `biz`：
-
-```bash
-python3 scripts/generate_bookmarks.py \
-  --input accounts.csv \
-  --biz-column biz \
-  --output-dir output
+```text
+Python 3.10+
+Git
+Node.js + npm
 ```
 
 ## 先预览输入
-
-不登录、不 clone 上游、不访问微信：
 
 ```bash
 python3 scripts/generate_bookmarks.py \
@@ -179,18 +216,11 @@ python3 scripts/generate_bookmarks.py \
   --output-dir output-preview
 ```
 
-生成：
-
-```text
-input_normalized.csv
-input_summary.json
-```
-
-可看到多少条能直接用 biz、多少条能先用 URL、多少条需要名称搜索。
+预览阶段不登录、不 clone 上游、不访问微信。
 
 ## 小批量试跑
 
-先跑 5 条：
+正式处理大名单前先跑少量记录：
 
 ```bash
 python3 scripts/generate_bookmarks.py \
@@ -199,26 +229,9 @@ python3 scripts/generate_bookmarks.py \
   --output-dir output-test
 ```
 
-纯名称记录首次会由上游 archive skill 生成微信公众平台二维码并要求正常扫码确认。登录态复用其默认缓存：
-
-```text
-~/.cache/wechat-article-archive/session.json
-```
-
-## 断点续跑
-
-`state.json` 使用 v2 schema，并保存 identity fingerprint。
-
-- 只改文件夹结构不会让已经解析的身份失效。
-- 名称、URL、biz 发生变化时不会错误沿用旧身份结果。
-- `--retry-unresolved`：重试未解析项。
-- `--no-resume`：忽略旧 state，全部重跑。
-
-遇到明确频控时停止后续微信请求并保留断点，不继续轰炸接口。
-
 ## 主页验证
 
-默认不额外请求几百个 `profile_ext`，避免增加微信请求量：
+默认不额外验证每个 `profile_ext`：
 
 ```text
 bookmark_status = unverified
@@ -230,15 +243,18 @@ bookmark_status = unverified
 python3 scripts/generate_bookmarks.py ... --validate-homepage
 ```
 
-验证逻辑采用保守原则：
+只有检测到明确公众号主页结构时才标记 `direct_ok`；无法确认时标记 `unknown`。
 
-> 只有检测到明确公众号主页结构且名称匹配才标记 `direct_ok`；无法确认时标记 `unknown`。
+## 断点续跑
 
-不要使用“HTTP 200 且没看到错误文本 = 成功”的判定。
+`state.json` schema 为 v3。
+
+- 只改文件夹结构不会让身份缓存失效。
+- 名称、URL、biz 变化时不复用旧身份结果。
+- `--retry-unresolved`：重试未解析项。
+- `--no-resume`：全部重跑。
 
 ## 输出校验
-
-生成后运行：
 
 ```bash
 python3 scripts/validate_output.py output
@@ -246,25 +262,15 @@ python3 scripts/validate_output.py output
 
 校验：
 
-- resolved 行必须有 `biz + homepage_url`
-- `homepage_url` 的 `__biz` 必须与 CSV 一致
-- unresolved 清单必须与身份状态一致
-- 每个已解析 biz 至少出现在一个浏览器书签中
-- `run_summary.json` 与 CSV 计数一致
-
-## 导入 Edge / Chrome
-
-浏览器中选择“从收藏夹/书签 HTML 导入”，导入：
-
-```text
-output/bookmarks.html
-```
+- `resolved` 必须有合法 `target_type + target_url`；
+- homepage target 必须有一致的 `biz + homepage_url`；
+- article target 必须等于 `fallback_article_url`；
+- unresolved / pending_review 不得偷偷进入 `bookmarks.html`；
+- `run_summary.json` 与 CSV 计数一致。
 
 ## 安全边界
 
 - 只处理用户有权访问的公开微信公众号信息。
-- 只使用正常扫码获得的微信公众平台登录态。
 - 不破解验证码、不伪造登录态、不绕过风控。
-- 不提高并发来规避微信限制。
-- 精确名称搜索失败时宁可 unresolved，不自动匹配相似结果。
-- 上游发生频控或验证时立即停止/降级，而不是循环重试。
+- 不做模糊匹配。
+- 名称与文章身份不一致时进入 `pending_review`，不要自动猜测。
