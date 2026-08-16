@@ -33,6 +33,7 @@ def validate(output_dir: Path) -> list[str]:
 
     names: set[str] = set()
     resolved_names: set[str] = set()
+    resolved_biz: set[str] = set()
     for row in accounts:
         name = str(row.get("original_name", "") or "").strip()
         if not name:
@@ -50,6 +51,7 @@ def validate(output_dir: Path) -> list[str]:
             if not biz or not homepage:
                 errors.append(f"{name}: resolved 但缺少 biz/homepage_url")
                 continue
+            resolved_biz.add(biz)
             try:
                 parts = urlsplit(homepage)
                 query = parse_qs(parts.query)
@@ -78,19 +80,18 @@ def validate(output_dir: Path) -> list[str]:
     else:
         content = bookmarks_path.read_text(encoding="utf-8")
         hrefs = [html.unescape(x) for x in re.findall(r'<A\s+HREF="([^"]+)"', content, flags=re.I)]
-        bookmark_biz = []
+        bookmark_biz: list[str] = []
         for href in hrefs:
             try:
                 q = parse_qs(urlsplit(href).query)
                 bookmark_biz.append((q.get("__biz") or [""])[0])
             except ValueError:
                 bookmark_biz.append("")
-        if len(hrefs) != len(resolved_names):
-            errors.append(
-                f"bookmarks.html 条目数 {len(hrefs)} 与 resolved 数量 {len(resolved_names)} 不一致"
-            )
         if any(not biz for biz in bookmark_biz):
             errors.append("bookmarks.html 存在缺少 __biz 的书签")
+        missing_biz = resolved_biz - set(bookmark_biz)
+        if missing_biz:
+            errors.append(f"bookmarks.html 缺少 {len(missing_biz)} 个已解析公众号")
 
     if not summary_path.is_file():
         errors.append(f"缺少文件：{summary_path}")
