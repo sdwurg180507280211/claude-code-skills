@@ -1,0 +1,42 @@
+{
+  "name": "my-skills",
+  "owner": {
+    "name": "sdwurg180507280211"
+  },
+  "metadata": {
+    "description": "Personal collection of reusable Agent and Claude Code skills",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "development-skills",
+      "description": "Specification, repository knowledge, and skill development workflows",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/spec-mode",
+        "./skills/github-kb",
+        "./skills/skill-creator"
+      ]
+    },
+    {
+      "name": "infrastructure-skills",
+      "description": "Deployment and network utility workflows",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/github-aliyun-deploy",
+        "./skills/china-proxy"
+      ]
+    },
+    {
+      "name": "utility-skills",
+      "description": "General-purpose automation utilities",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/wechat-account-bookmarks"
+      ]
+    }
+  ]
+}
