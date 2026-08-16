@@ -21,10 +21,10 @@ from io_utils import (
     load_entries,
     load_json,
 )
-from resolver import FIELDS, now_iso, parse_biz_from_url, resolve_entry
+from resolver import FIELDS, now_iso, resolve_entry
 from upstream import ensure_upstreams
 
-STATE_SCHEMA_VERSION = 2
+STATE_SCHEMA_VERSION = 3
 
 
 def unique_entries(entries: list[InputEntry]) -> list[InputEntry]:
@@ -37,8 +37,7 @@ def unique_entries(entries: list[InputEntry]) -> list[InputEntry]:
 def is_identity_resolved(item: dict) -> bool:
     return (
         str(item.get("identity_status", "") or "") == "resolved"
-        and bool(str(item.get("biz", "") or "").strip())
-        and bool(str(item.get("homepage_url", "") or "").strip())
+        and bool(str(item.get("target_url", "") or "").strip())
     )
 
 
@@ -97,8 +96,11 @@ def build_outputs(
         rows.append(item)
         if not is_identity_resolved(item):
             unresolved.append(item)
-        elif str(item.get("bookmark_status", "") or "") not in {"direct_ok", "unverified"}:
-            bookmark_review.append(item)
+        else:
+            bookmark_status = str(item.get("bookmark_status", "") or "")
+            fallback_status = str(item.get("fallback_status", "") or "")
+            if bookmark_status != "direct_ok" or fallback_status != "present":
+                bookmark_review.append(item)
 
     write_csv(output_dir / "wechat_accounts.csv", rows)
     write_csv(output_dir / "unresolved.csv", unresolved)
@@ -118,9 +120,13 @@ def build_outputs(
             "biz": (results.get(entry.name) or {}).get("biz", ""),
             "homepage_url": (results.get(entry.name) or {}).get("homepage_url", ""),
             "fallback_article_url": (results.get(entry.name) or {}).get("fallback_article_url", ""),
+            "target_type": (results.get(entry.name) or {}).get("target_type", ""),
+            "target_url": (results.get(entry.name) or {}).get("target_url", ""),
             "identity_status": (results.get(entry.name) or {}).get("identity_status", ""),
             "bookmark_status": (results.get(entry.name) or {}).get("bookmark_status", ""),
+            "fallback_status": (results.get(entry.name) or {}).get("fallback_status", ""),
             "resolved_by": (results.get(entry.name) or {}).get("resolved_by", ""),
+            "error_code": (results.get(entry.name) or {}).get("error_code", ""),
         }
         for entry in unique
         if is_identity_resolved(results.get(entry.name) or {})
@@ -129,12 +135,15 @@ def build_outputs(
 
     identity_counts: dict[str, int] = {}
     bookmark_counts: dict[str, int] = {}
+    target_counts: dict[str, int] = {}
     for entry in unique:
         item = results.get(entry.name) or {}
         identity = str(item.get("identity_status", "") or "unknown")
         bookmark = str(item.get("bookmark_status", "") or "unknown")
+        target_type = str(item.get("target_type", "") or "none")
         identity_counts[identity] = identity_counts.get(identity, 0) + 1
         bookmark_counts[bookmark] = bookmark_counts.get(bookmark, 0) + 1
+        target_counts[target_type] = target_counts.get(target_type, 0) + 1
 
     resolved = sum(1 for entry in unique if is_identity_resolved(results.get(entry.name) or {}))
     summary = {
@@ -143,8 +152,15 @@ def build_outputs(
         "identity_resolved": resolved,
         "identity_unresolved": len(unique) - resolved,
         "bookmark_review": len(bookmark_review),
+        "fallback_missing": sum(
+            1
+            for entry in unique
+            if is_identity_resolved(results.get(entry.name) or {})
+            and str((results.get(entry.name) or {}).get("fallback_status", "") or "") != "present"
+        ),
         "identity_status_counts": identity_counts,
         "bookmark_status_counts": bookmark_counts,
+        "target_type_counts": target_counts,
         "bookmarks_file": str((output_dir / "bookmarks.html").resolve()),
         "generated_at": now_iso(),
     }
@@ -153,7 +169,7 @@ def build_outputs(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="批量生成微信公众号主页浏览器书签")
+    parser = argparse.ArgumentParser(description="批量生成微信公众号主页/文章浏览器书签")
     parser.add_argument("--input", required=True, help="输入 .xlsx 或 .csv")
     parser.add_argument("--sheet", default=None, help="Excel Sheet 名称；默认第一个")
     parser.add_argument("--name-column", default=None, help="公众号名称列；默认自动识别")
@@ -198,7 +214,7 @@ def write_normalized_input(output_dir: Path, entries: list[InputEntry]) -> dict:
             "解析优先级": (
                 "input_biz"
                 if entry.biz
-                else "input_article_url"
+                else "input_article_url_verify"
                 if entry.url
                 else "upstream_archive"
             ),
@@ -294,10 +310,10 @@ def main() -> int:
 
     print(f"输入行数：{len(entries)}；唯一公众号：{len(unique)}；本次待处理：{len(pending)}")
 
-    needs_upstream = any(
-        not entry.biz and (not entry.url or not parse_biz_from_url(entry.url))
-        for entry in pending
-    )
+    # Explicit biz can be used without network access. Article URLs must pass
+    # through the upstream extractor so the article/account name is not silently
+    # bound to the wrong Excel row. Pure names need archive discovery as before.
+    needs_upstream = any(not entry.biz for entry in pending)
     upstream = None
     if needs_upstream:
         try:
@@ -346,6 +362,7 @@ def main() -> int:
         print(
             f"    → identity={result.get('identity_status')} "
             f"bookmark={result.get('bookmark_status')} "
+            f"target={result.get('target_type')} "
             f"by={result.get('resolved_by')} biz={result.get('biz', '')}"
         )
 

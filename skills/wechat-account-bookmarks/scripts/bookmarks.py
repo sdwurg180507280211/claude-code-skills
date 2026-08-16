@@ -14,13 +14,20 @@ def build_homepage_url(biz: str) -> str:
     return f"https://mp.weixin.qq.com/mp/profile_ext?{query}#wechat_redirect"
 
 
-def build_tree(entries: list[InputEntry], result_by_name: dict[str, dict], root_folder: str, strip_prefix: str | None):
+def build_tree(
+    entries: list[InputEntry],
+    result_by_name: dict[str, dict],
+    root_folder: str,
+    strip_prefix: str | None,
+):
     root = {"folders": {}, "bookmarks": []}
     seen: set[tuple[tuple[str, ...], str, str]] = set()
 
     for entry in entries:
         result = result_by_name.get(entry.name) or {}
-        url = str(result.get("homepage_url", "") or "").strip()
+        if str(result.get("identity_status", "") or "") != "resolved":
+            continue
+        url = str(result.get("target_url", "") or "").strip()
         if not url:
             continue
         folders = [root_folder] + normalize_folder(entry.folder, strip_prefix)
@@ -55,7 +62,12 @@ def _render_node(node: dict, indent: int = 0) -> list[str]:
     return lines
 
 
-def render_bookmarks_html(entries: list[InputEntry], result_by_name: dict[str, dict], root_folder: str = "微信公众号", strip_prefix: str | None = "桌面") -> str:
+def render_bookmarks_html(
+    entries: list[InputEntry],
+    result_by_name: dict[str, dict],
+    root_folder: str = "微信公众号",
+    strip_prefix: str | None = "桌面",
+) -> str:
     tree = build_tree(entries, result_by_name, root_folder, strip_prefix)
     body = _render_node(tree, 1)
     lines = [
