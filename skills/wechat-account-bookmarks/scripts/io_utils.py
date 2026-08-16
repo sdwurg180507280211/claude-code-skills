@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -10,19 +11,37 @@ from pathlib import Path
 
 NAME_CANDIDATES = ["快捷方式名称", "公众号名称", "内容名称", "名称", "name"]
 FOLDER_CANDIDATES = ["文件夹结构", "分类", "文件夹", "folder", "category"]
+URL_CANDIDATES = ["URL", "url", "链接", "公众号链接", "文章链接", "历史链接", "fallback_article_url"]
+BIZ_CANDIDATES = ["__biz", "biz", "account_biz", "公众号biz"]
 
 
 @dataclass(frozen=True)
 class InputEntry:
     name: str
     folder: str = ""
+    url: str = ""
+    biz: str = ""
+
+    def identity_key(self) -> str:
+        payload = json.dumps(
+            {"name": self.name, "url": self.url, "biz": self.biz},
+            ensure_ascii=False,
+            sort_keys=True,
+            separators=(",", ":"),
+        )
+        return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def _norm_header(value: object) -> str:
     return str(value or "").strip()
 
 
-def choose_column(headers: list[str], requested: str | None, candidates: list[str], required: bool) -> str | None:
+def choose_column(
+    headers: list[str],
+    requested: str | None,
+    candidates: list[str],
+    required: bool,
+) -> str | None:
     if requested:
         if requested not in headers:
             raise ValueError(f"找不到列：{requested}；现有列：{headers}")
@@ -35,23 +54,58 @@ def choose_column(headers: list[str], requested: str | None, candidates: list[st
     return None
 
 
-def load_csv(path: Path, name_column: str | None, folder_column: str | None) -> tuple[list[InputEntry], str, str | None]:
+def _entry_from_mapping(
+    row: dict,
+    name_col: str,
+    folder_col: str | None,
+    url_col: str | None,
+    biz_col: str | None,
+) -> InputEntry | None:
+    name = str(row.get(name_col, "") or "").strip()
+    if not name:
+        return None
+    folder = str(row.get(folder_col, "") or "").strip() if folder_col else ""
+    url = str(row.get(url_col, "") or "").strip() if url_col else ""
+    biz = str(row.get(biz_col, "") or "").strip() if biz_col else ""
+    return InputEntry(name=name, folder=folder, url=url, biz=biz)
+
+
+def load_csv(
+    path: Path,
+    name_column: str | None,
+    folder_column: str | None,
+    url_column: str | None,
+    biz_column: str | None,
+) -> tuple[list[InputEntry], dict]:
     with path.open("r", encoding="utf-8-sig", newline="") as fh:
         reader = csv.DictReader(fh)
         headers = [_norm_header(h) for h in (reader.fieldnames or [])]
         name_col = choose_column(headers, name_column, NAME_CANDIDATES, True)
         folder_col = choose_column(headers, folder_column, FOLDER_CANDIDATES, False)
+        url_col = choose_column(headers, url_column, URL_CANDIDATES, False)
+        biz_col = choose_column(headers, biz_column, BIZ_CANDIDATES, False)
         entries: list[InputEntry] = []
         for row in reader:
-            name = str(row.get(name_col, "") or "").strip()
-            if not name:
-                continue
-            folder = str(row.get(folder_col, "") or "").strip() if folder_col else ""
-            entries.append(InputEntry(name=name, folder=folder))
-    return entries, name_col, folder_col
+            entry = _entry_from_mapping(row, name_col, folder_col, url_col, biz_col)
+            if entry:
+                entries.append(entry)
+    return entries, {
+        "sheet": None,
+        "name_column": name_col,
+        "folder_column": folder_col,
+        "url_column": url_col,
+        "biz_column": biz_col,
+    }
 
 
-def load_xlsx(path: Path, sheet_name: str | None, name_column: str | None, folder_column: str | None) -> tuple[list[InputEntry], str, str | None, str]:
+def load_xlsx(
+    path: Path,
+    sheet_name: str | None,
+    name_column: str | None,
+    folder_column: str | None,
+    url_column: str | None,
+    biz_column: str | None,
+) -> tuple[list[InputEntry], dict]:
     try:
         from openpyxl import load_workbook
     except ImportError as exc:
@@ -69,37 +123,77 @@ def load_xlsx(path: Path, sheet_name: str | None, name_column: str | None, folde
     try:
         header_row = next(rows)
     except StopIteration:
-        return [], name_column or "", folder_column, ws.title
+        return [], {
+            "sheet": ws.title,
+            "name_column": name_column or "",
+            "folder_column": folder_column,
+            "url_column": url_column,
+            "biz_column": biz_column,
+        }
 
     headers = [_norm_header(x) for x in header_row]
     name_col = choose_column(headers, name_column, NAME_CANDIDATES, True)
     folder_col = choose_column(headers, folder_column, FOLDER_CANDIDATES, False)
-    name_idx = headers.index(name_col)
-    folder_idx = headers.index(folder_col) if folder_col else None
+    url_col = choose_column(headers, url_column, URL_CANDIDATES, False)
+    biz_col = choose_column(headers, biz_column, BIZ_CANDIDATES, False)
+
+    indexes = {
+        "name": headers.index(name_col),
+        "folder": headers.index(folder_col) if folder_col else None,
+        "url": headers.index(url_col) if url_col else None,
+        "biz": headers.index(biz_col) if biz_col else None,
+    }
 
     entries: list[InputEntry] = []
     for row in rows:
-        if name_idx >= len(row):
+        if indexes["name"] >= len(row):
             continue
-        name = str(row[name_idx] or "").strip()
-        if not name:
-            continue
-        folder = ""
-        if folder_idx is not None and folder_idx < len(row):
-            folder = str(row[folder_idx] or "").strip()
-        entries.append(InputEntry(name=name, folder=folder))
-    return entries, name_col, folder_col, ws.title
+        values: dict[str, object] = {name_col: row[indexes["name"]]}
+        for key, col in (("folder", folder_col), ("url", url_col), ("biz", biz_col)):
+            idx = indexes[key]
+            if col and idx is not None and idx < len(row):
+                values[col] = row[idx]
+        entry = _entry_from_mapping(values, name_col, folder_col, url_col, biz_col)
+        if entry:
+            entries.append(entry)
+
+    return entries, {
+        "sheet": ws.title,
+        "name_column": name_col,
+        "folder_column": folder_col,
+        "url_column": url_col,
+        "biz_column": biz_col,
+    }
 
 
-def load_entries(path: Path, sheet_name: str | None = None, name_column: str | None = None, folder_column: str | None = None) -> tuple[list[InputEntry], dict]:
+def load_entries(
+    path: Path,
+    sheet_name: str | None = None,
+    name_column: str | None = None,
+    folder_column: str | None = None,
+    url_column: str | None = None,
+    biz_column: str | None = None,
+) -> tuple[list[InputEntry], dict]:
     suffix = path.suffix.lower()
     if suffix == ".csv":
-        entries, name_col, folder_col = load_csv(path, name_column, folder_column)
-        return entries, {"sheet": None, "name_column": name_col, "folder_column": folder_col}
+        return load_csv(path, name_column, folder_column, url_column, biz_column)
     if suffix == ".xlsx":
-        entries, name_col, folder_col, sheet = load_xlsx(path, sheet_name, name_column, folder_column)
-        return entries, {"sheet": sheet, "name_column": name_col, "folder_column": folder_col}
+        return load_xlsx(
+            path,
+            sheet_name,
+            name_column,
+            folder_column,
+            url_column,
+            biz_column,
+        )
     raise ValueError("只支持 .xlsx 和 .csv 输入")
+
+
+def identity_fingerprint(entries: list[InputEntry]) -> str:
+    """Fingerprint identity inputs only; folder edits do not invalidate cached identity results."""
+    canonical = sorted({entry.identity_key() for entry in entries})
+    payload = "\n".join(canonical)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
 def normalize_folder(folder: str, strip_prefix: str | None) -> list[str]:

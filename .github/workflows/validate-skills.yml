@@ -20,5 +20,7 @@ jobs:
         run: python3 scripts/validate_skills.py
       - name: Install WeChat bookmark skill dependencies
         run: pip install -r skills/wechat-account-bookmarks/requirements.txt
+      - name: Compile WeChat bookmark scripts
+        run: python3 -m compileall -q skills/wechat-account-bookmarks/scripts
       - name: Run WeChat bookmark skill tests
         run: python3 -m unittest discover -s skills/wechat-account-bookmarks/tests -v

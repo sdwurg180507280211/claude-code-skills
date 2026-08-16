@@ -1,3 +1,4 @@
+import csv
 import sys
 import tempfile
 import unittest
@@ -8,17 +9,14 @@ SCRIPTS = ROOT / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
 from bookmarks import build_homepage_url, render_bookmarks_html
-from io_utils import InputEntry, load_entries, normalize_folder
-from wechat_mp import parse_biz_from_html, parse_biz_from_url
+from io_utils import InputEntry, identity_fingerprint, load_entries, normalize_folder
+from resolver import parse_biz_from_url, resolve_entry
 
 
 class CoreTests(unittest.TestCase):
     def test_parse_biz_from_url(self):
         url = "https://mp.weixin.qq.com/s?__biz=MjM5NjM4MDAxMg%3D%3D&mid=1&idx=1&sn=x"
         self.assertEqual(parse_biz_from_url(url), "MjM5NjM4MDAxMg==")
-
-    def test_parse_biz_from_html(self):
-        self.assertEqual(parse_biz_from_html('var biz = "MzA123456789==";'), "MzA123456789==")
 
     def test_build_homepage_url(self):
         url = build_homepage_url("MjM5NjM4MDAxMg==")
@@ -39,19 +37,63 @@ class CoreTests(unittest.TestCase):
             "财新": {"homepage_url": "https://example.com/caixin"},
             "iNature": {"homepage_url": "https://example.com/inature"},
         }
-        html = render_bookmarks_html(entries, result)
-        self.assertIn("微信公众号", html)
-        self.assertIn("财经新闻", html)
-        self.assertIn("财新", html)
-        self.assertIn("https://example.com/caixin", html)
+        content = render_bookmarks_html(entries, result)
+        self.assertIn("微信公众号", content)
+        self.assertIn("财经新闻", content)
+        self.assertIn("财新", content)
+        self.assertIn("https://example.com/caixin", content)
 
-    def test_csv_input(self):
+    def test_csv_input_reads_url_and_biz(self):
         with tempfile.TemporaryDirectory() as td:
             path = Path(td) / "accounts.csv"
-            path.write_text("公众号名称,分类\n财新,桌面 > 财经新闻\n", encoding="utf-8-sig")
+            path.write_text(
+                "公众号名称,分类,URL,biz\n财新,桌面 > 财经新闻,https://mp.weixin.qq.com/s?__biz=abc,abc\n",
+                encoding="utf-8-sig",
+            )
             entries, meta = load_entries(path)
             self.assertEqual(entries[0].name, "财新")
-            self.assertEqual(meta["name_column"], "公众号名称")
+            self.assertEqual(entries[0].url, "https://mp.weixin.qq.com/s?__biz=abc")
+            self.assertEqual(entries[0].biz, "abc")
+            self.assertEqual(meta["url_column"], "URL")
+            self.assertEqual(meta["biz_column"], "biz")
+
+    def test_identity_fingerprint_ignores_folder_only_changes(self):
+        one = [InputEntry("财新", "桌面 > A", "https://mp.weixin.qq.com/s?__biz=abc", "")]
+        two = [InputEntry("财新", "桌面 > B", "https://mp.weixin.qq.com/s?__biz=abc", "")]
+        self.assertEqual(identity_fingerprint(one), identity_fingerprint(two))
+
+    def test_resolve_prefers_input_biz_without_upstream(self):
+        with tempfile.TemporaryDirectory() as td:
+            entry = InputEntry("财新", "财经", "", "abc==")
+            result = resolve_entry(
+                entry,
+                upstream=None,
+                adapter_script=SCRIPTS / "extract_identity.js",
+                session_path=Path(td) / "session.json",
+                work_dir=Path(td),
+                validate=False,
+            )
+            self.assertEqual(result["identity_status"], "resolved")
+            self.assertEqual(result["resolved_by"], "input_biz")
+            self.assertEqual(result["biz"], "abc==")
+            self.assertEqual(result["bookmark_status"], "unverified")
+
+    def test_resolve_uses_biz_from_input_url_without_upstream(self):
+        with tempfile.TemporaryDirectory() as td:
+            url = "https://mp.weixin.qq.com/s?__biz=abc%3D%3D&mid=1&idx=1&sn=x"
+            entry = InputEntry("财新", "财经", url, "")
+            result = resolve_entry(
+                entry,
+                upstream=None,
+                adapter_script=SCRIPTS / "extract_identity.js",
+                session_path=Path(td) / "session.json",
+                work_dir=Path(td),
+                validate=False,
+            )
+            self.assertEqual(result["identity_status"], "resolved")
+            self.assertEqual(result["resolved_by"], "input_article_url")
+            self.assertEqual(result["biz"], "abc==")
+            self.assertEqual(result["fallback_article_url"], url)
 
 
 if __name__ == "__main__":
