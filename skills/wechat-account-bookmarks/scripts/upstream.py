@@ -52,16 +52,24 @@ def _require_command(name: str) -> str:
 
 def _ensure_repo(path: Path, repo_url: str, commit: str) -> None:
     git = _require_command("git")
+    just_cloned = False
     if not (path / ".git").is_dir():
         path.parent.mkdir(parents=True, exist_ok=True)
         _run([git, "clone", "--filter=blob:none", "--no-checkout", repo_url, str(path)])
+        just_cloned = True
+
     try:
         head = _run([git, "rev-parse", "HEAD"], cwd=path).stdout.strip()
     except subprocess.CalledProcessError:
         head = ""
-    if head != commit:
+
+    if just_cloned or head != commit:
         _run([git, "fetch", "origin", commit, "--depth", "1"], cwd=path)
-        _run([git, "checkout", "--detach", commit], cwd=path)
+
+    # --no-checkout leaves a freshly cloned worktree empty even when HEAD already
+    # equals the pinned commit. Always checkout the pinned commit so required
+    # scripts/package files are materialized on disk.
+    _run([git, "checkout", "--detach", commit], cwd=path)
 
 
 def _ensure_extractor_dependencies(repo: Path) -> None:
