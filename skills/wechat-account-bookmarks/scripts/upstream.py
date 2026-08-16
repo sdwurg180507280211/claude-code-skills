@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import os
 import shutil
 import subprocess
 from dataclasses import dataclass
@@ -28,7 +27,11 @@ class UpstreamPaths:
         return self.extractor_repo / "scripts" / "extract.js"
 
 
-def _run(cmd: list[str], cwd: Path | None = None, timeout: int = 300) -> subprocess.CompletedProcess:
+def _run(
+    cmd: list[str],
+    cwd: Path | None = None,
+    timeout: int = 300,
+) -> subprocess.CompletedProcess:
     return subprocess.run(
         cmd,
         cwd=str(cwd) if cwd else None,
@@ -82,14 +85,20 @@ def ensure_upstreams(
     if bootstrap:
         if archive_repo is None:
             _ensure_repo(archive, ARCHIVE_REPO_URL, ARCHIVE_COMMIT)
+        elif not archive.is_dir():
+            raise RuntimeError(f"找不到 archive 上游仓库：{archive}")
+
         if extractor_repo is None:
             _ensure_repo(extractor, EXTRACTOR_REPO_URL, EXTRACTOR_COMMIT)
-            _ensure_extractor_dependencies(extractor)
+        elif not extractor.is_dir():
+            raise RuntimeError(f"找不到 extractor 上游仓库：{extractor}")
+        _ensure_extractor_dependencies(extractor)
     else:
         if not archive.is_dir():
             raise RuntimeError(f"找不到 archive 上游仓库：{archive}")
         if not extractor.is_dir():
             raise RuntimeError(f"找不到 extractor 上游仓库：{extractor}")
+        _require_command("node")
 
     paths = UpstreamPaths(archive_repo=archive, extractor_repo=extractor)
     if not paths.discover_script.is_file():
