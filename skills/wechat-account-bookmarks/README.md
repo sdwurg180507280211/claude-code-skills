@@ -11,6 +11,8 @@
 - `freestylefly/wechat-article-archive-skill`：公众号名称 → `searchbiz` → `fakeid` → 历史文章
 - `freestylefly/wechat-article-extractor-skill`：文章 URL/HTML → `account_biz`、公众号名称、微信号、迁移/注销/频控等状态
 
+`freestylefly/canghe-skills` 中的 `skills/canghe-wechat-article-extractor` 本身就是一个 submodule，当前指向 `wechat-article-extractor-skill` 的同一个 commit：`d8f74b8946065e64537f1ad39f962dbed86da3c7`。因此这里不是重新实现“一个类似苍何的 extractor”，而是直接使用苍何仓库实际引用的那份实现。
+
 本 Skill 自己只维护：
 
 ```text
