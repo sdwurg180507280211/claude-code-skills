@@ -1,83 +1,40 @@
 ---
 name: github-kb
-description: Manages local GitHub repository knowledge base. Triggers whenever user mentions "github", "repo", "repository", or "仓库". Searches local repos first, then GitHub. Handles repo downloads and maintains a registry. Use this skill for any GitHub-related queries, repository searches, or when user wants to clone/download repos.
+description: Maintain and search a local knowledge base of cloned GitHub repositories. Use when the user wants to search local repositories, reuse local source code, clone a repository into the local project collection, or maintain a local repo registry. Do not trigger for ordinary public GitHub questions that do not need the local repository collection.
 ---
 
-# GitHub Knowledge Base Manager
+# GitHub Local Knowledge Base
 
-This skill manages your local GitHub repository collection and helps you search both locally and on GitHub.
+Use a local repository collection as the first source when the task is specifically about the user's cloned projects or reusable local code.
 
-## Local Repository Directory
+## Repository root
 
-**Primary location**: `~/IdeaProjects` (configurable - adjust to your local projects directory)
+Prefer an explicit project root supplied by the user. Otherwise use `GITHUB_KB_ROOT` when set; if neither is available, use `~/projects` as a conventional default and confirm it exists before writing there.
 
-> **Setup Note**: After installation, edit this file and change `~/IdeaProjects` to your actual local projects/repos directory path (e.g., `~/projects`, `~/code`, `~/repos`).
+## Workflow
 
-This directory contains your cloned GitHub repositories. A `CLAUDE.md` file in this directory maintains a registry of all repos with one-line summaries.
+1. Check the local repository root for an exact or likely repository match.
+2. If a local repository exists, inspect it locally before searching remote GitHub.
+3. If the requested repository is not local and the user wants a local copy, clone it into the repository root.
+4. Maintain an optional `CLAUDE.md` registry in the repository root with one concise line per cloned repository.
+5. Never overwrite an existing local repository silently.
 
-## Core Workflow
-
-When the user mentions a repository, GitHub, or asks about code:
-
-1. **Check local first**: Search the projects directory for matching repository names
-2. **Read CLAUDE.md**: Check the registry for context about available repos
-3. **Search locally**: If found locally, analyze the repo to answer the user's question
-4. **Search GitHub**: If not found locally, use `gh` or `curl` to search GitHub
-5. **Offer to clone**: If user wants a repo that's not local, offer to download it
-
-## Directory Verification
-
-At the start of each session using this skill, verify the directory exists:
-
-```bash
-ls ~/IdeaProjects
-```
-
-If the directory doesn't exist, ask the user for the correct path and remember it for this session.
-
-## CLAUDE.md Registry
-
-The file `~/IdeaProjects/CLAUDE.md` serves as a registry of all repositories. Format:
+## Local registry format
 
 ```markdown
 # GitHub Repository Registry
 
-- **repo-name**: One-line description of what this repo does
-- **another-repo**: Brief summary
+- **repo-name**: One-line description
+- **another-repo**: One-line description
 ```
 
-When you clone a new repo, update this file. When analyzing repos, read this file first for context.
+## GitHub access
 
-## Cloning Repositories
+Use the environment's native GitHub connector/tool when available. Fall back to `gh` or the GitHub REST API only when appropriate for the runtime.
 
-When user asks to download/clone a repo:
+## Guardrails
 
-1. Extract the repository name or URL
-2. Clone to the directory: `git clone <url> ~/IdeaProjects/<repo-name>`
-3. After successful clone, update CLAUDE.md with a one-line summary
-4. Confirm completion to user
-
-## Searching GitHub
-
-Use these methods in order of preference:
-
-**Method 1 - gh CLI** (if available):
-```bash
-gh repo search <query>
-gh issue list --repo <owner/repo>
-gh pr list --repo <owner/repo>
-```
-
-**Method 2 - curl** (fallback):
-```bash
-curl -s "https://api.github.com/search/repositories?q=<query>"
-curl -s "https://api.github.com/repos/<owner>/<repo>"
-```
-
-## Answering User Questions
-
-When user asks about a repo:
-1. Check if it exists locally in the projects directory
-2. If local, use Read/Grep/Glob tools to analyze and answer
-3. If not local, search GitHub and offer to clone it
-4. Provide concise, actionable answers
+- Do not trigger on every mention of “GitHub”, “repo”, or “repository”.
+- Do not clone repositories unless a local copy is useful for the requested task.
+- Do not assume `~/IdeaProjects` or another machine-specific path.
+- Do not modify the user's local registry or clone location without a clear task reason.

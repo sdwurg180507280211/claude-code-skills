@@ -8,9 +8,8 @@
 |---|---|---|
 | [`spec-mode`](skills/spec-mode) | Development | 规格驱动开发：需求 → 设计 → 实现 |
 | [`github-kb`](skills/github-kb) | Development | 本地 GitHub 仓库知识库与检索 |
-| [`skill-creator`](skills/skill-creator) | Development | Skill 创建、评估与优化工具链 |
 | [`github-aliyun-deploy`](skills/github-aliyun-deploy) | Infrastructure | GitHub → 阿里云 ECS 自动部署 |
-| [`china-proxy`](skills/china-proxy) | Infrastructure | 国内开发环境代理探测与配置 |
+| [`china-proxy`](skills/china-proxy) | Infrastructure | 命令行访问受阻时探测并应用本地代理 |
 | [`wechat-account-bookmarks`](skills/wechat-account-bookmarks) | Utility | 批量把微信公众号名称生成 Edge / Chrome 公众号主页书签 |
 
 ## 安装
@@ -56,9 +55,10 @@ my-skills/
 │   ├── china-proxy/
 │   ├── github-aliyun-deploy/
 │   ├── github-kb/
-│   ├── skill-creator/
 │   ├── spec-mode/
 │   └── wechat-account-bookmarks/
+├── CHANGELOG.md
+├── CLAUDE.md
 ├── CONTRIBUTING.md
 ├── LICENSE
 └── README.md
@@ -87,6 +87,13 @@ python3 scripts/validate_skills.py
 - 是否误提交缓存、虚拟环境、运行输出等文件
 - Marketplace 是否只引用真实存在的 Skill
 - `wechat-account-bookmarks` 的核心离线测试是否通过
+
+## 维护原则
+
+- 仓库只保留自己真正维护、会继续迭代的 Skill。
+- 大型通用上游 Skill 不复制进来，优先直接使用上游版本，避免长期分叉。
+- Skill 的触发描述应足够具体，避免“只要提到 GitHub 就触发”这类过宽规则。
+- 不提交 Cookie、Token、二维码登录态、真实用户输入、运行输出或缓存。
 
 ## License
 

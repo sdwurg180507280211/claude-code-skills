@@ -5,18 +5,17 @@
   },
   "metadata": {
     "description": "Personal collection of reusable Agent and Claude Code skills",
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "plugins": [
     {
       "name": "development-skills",
-      "description": "Specification, repository knowledge, and skill development workflows",
+      "description": "Specification and local repository workflows",
       "source": "./",
       "strict": false,
       "skills": [
         "./skills/spec-mode",
-        "./skills/github-kb",
-        "./skills/skill-creator"
+        "./skills/github-kb"
       ]
     },
     {
