@@ -33,7 +33,7 @@ def validate(output_dir: Path) -> list[str]:
 
     names: set[str] = set()
     resolved_names: set[str] = set()
-    resolved_biz: set[str] = set()
+    resolved_targets: dict[str, str] = {}
     for row in accounts:
         name = str(row.get("original_name", "") or "").strip()
         if not name:
@@ -44,27 +44,39 @@ def validate(output_dir: Path) -> list[str]:
         names.add(name)
 
         identity_status = str(row.get("identity_status", "") or "")
+        target_type = str(row.get("target_type", "") or "").strip()
+        target_url = str(row.get("target_url", "") or "").strip()
         biz = str(row.get("biz", "") or "").strip()
         homepage = str(row.get("homepage_url", "") or "").strip()
+        fallback = str(row.get("fallback_article_url", "") or "").strip()
+
         if identity_status == "resolved":
             resolved_names.add(name)
-            if not biz or not homepage:
-                errors.append(f"{name}: resolved 但缺少 biz/homepage_url")
+            if target_type not in {"homepage", "article"} or not target_url:
+                errors.append(f"{name}: resolved 但缺少有效 target_type/target_url")
                 continue
-            resolved_biz.add(biz)
-            try:
-                parts = urlsplit(homepage)
-                query = parse_qs(parts.query)
-                url_biz = (query.get("__biz") or [""])[0]
-            except ValueError:
-                errors.append(f"{name}: homepage_url 无法解析")
-                continue
-            if parts.scheme != "https" or parts.netloc != "mp.weixin.qq.com":
-                errors.append(f"{name}: homepage_url 不是 mp.weixin.qq.com HTTPS")
-            if url_biz != biz:
-                errors.append(f"{name}: homepage_url 的 __biz 与 biz 不一致")
-        elif homepage or biz:
-            errors.append(f"{name}: identity_status={identity_status or 'empty'} 但仍带 biz/homepage_url")
+            resolved_targets[name] = target_url
+
+            if target_type == "homepage":
+                if not biz or not homepage or target_url != homepage:
+                    errors.append(f"{name}: homepage target 缺少 biz/homepage_url 或 target_url 不一致")
+                    continue
+                try:
+                    parts = urlsplit(homepage)
+                    query = parse_qs(parts.query)
+                    url_biz = (query.get("__biz") or [""])[0]
+                except ValueError:
+                    errors.append(f"{name}: homepage_url 无法解析")
+                    continue
+                if parts.scheme != "https" or parts.netloc != "mp.weixin.qq.com":
+                    errors.append(f"{name}: homepage_url 不是 mp.weixin.qq.com HTTPS")
+                if url_biz != biz:
+                    errors.append(f"{name}: homepage_url 的 __biz 与 biz 不一致")
+            elif target_type == "article":
+                if not fallback or target_url != fallback:
+                    errors.append(f"{name}: article target 必须与 fallback_article_url 一致")
+        elif target_url:
+            errors.append(f"{name}: identity_status={identity_status or 'empty'} 却存在 target_url")
 
     unresolved_names = {
         str(row.get("original_name", "") or "").strip()
@@ -73,25 +85,21 @@ def validate(output_dir: Path) -> list[str]:
     }
     expected_unresolved = names - resolved_names
     if unresolved_names != expected_unresolved:
-        errors.append("unresolved.csv 与 wechat_accounts.csv 的 identity_status 不一致")
+        errors.append("unresolved.csv 与 wechat_accounts.csv 的 identity_status/target_url 不一致")
 
     if not bookmarks_path.is_file():
         errors.append(f"缺少文件：{bookmarks_path}")
     else:
         content = bookmarks_path.read_text(encoding="utf-8")
         hrefs = [html.unescape(x) for x in re.findall(r'<A\s+HREF="([^"]+)"', content, flags=re.I)]
-        bookmark_biz: list[str] = []
-        for href in hrefs:
-            try:
-                q = parse_qs(urlsplit(href).query)
-                bookmark_biz.append((q.get("__biz") or [""])[0])
-            except ValueError:
-                bookmark_biz.append("")
-        if any(not biz for biz in bookmark_biz):
-            errors.append("bookmarks.html 存在缺少 __biz 的书签")
-        missing_biz = resolved_biz - set(bookmark_biz)
-        if missing_biz:
-            errors.append(f"bookmarks.html 缺少 {len(missing_biz)} 个已解析公众号")
+        expected_hrefs = set(resolved_targets.values())
+        actual_hrefs = set(hrefs)
+        missing = expected_hrefs - actual_hrefs
+        if missing:
+            errors.append(f"bookmarks.html 缺少 {len(missing)} 个已解析 target_url")
+        unexpected = actual_hrefs - expected_hrefs
+        if unexpected:
+            errors.append(f"bookmarks.html 存在 {len(unexpected)} 个不属于 resolved 记录的 URL")
 
     if not summary_path.is_file():
         errors.append(f"缺少文件：{summary_path}")
