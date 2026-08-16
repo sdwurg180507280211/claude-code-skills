@@ -31,10 +31,14 @@ FIELDS = [
     "homepage_url",
     "fallback_article_url",
     "fallback_article_title",
+    "target_type",
+    "target_url",
     "folder",
     "identity_status",
     "bookmark_status",
+    "fallback_status",
     "resolved_by",
+    "error_code",
     "validation_http_status",
     "validation_final_url",
     "error",
@@ -44,11 +48,11 @@ FIELDS = [
 RATE_LIMIT_MARKERS = ["访问过于频繁", "操作频繁", "环境异常", "rate limit", "频控"]
 SESSION_MARKERS = ["session expired", "dashboard session expired", "200003"]
 EXTRACTOR_STATUS_BY_CODE = {
-    1004: "rate_limited",
-    1006: "migrated",
-    2012: "inactive",
-    2013: "inactive",
-    2015: "migrated",
+    1004: ("rate_limited", "rate_limited"),
+    1006: ("migrated", "account_migrated"),
+    2012: ("inactive", "account_blocked"),
+    2013: ("inactive", "account_closed"),
+    2015: ("migrated", "account_migrating"),
 }
 
 
@@ -65,6 +69,7 @@ def blank_result(entry: InputEntry) -> dict:
             "folder": entry.folder,
             "identity_status": "unresolved",
             "bookmark_status": "not_available",
+            "fallback_status": "missing",
             "last_verified_at": now_iso(),
         }
     )
@@ -111,17 +116,19 @@ def _last_json_line(text: str) -> dict:
     return {}
 
 
-def _classify_error(text: str) -> str:
+def _classify_error(text: str) -> tuple[str, str]:
     lower = (text or "").lower()
     if any(marker.lower() in lower for marker in RATE_LIMIT_MARKERS):
-        return "rate_limited"
+        return "rate_limited", "rate_limited"
     if any(marker.lower() in lower for marker in SESSION_MARKERS):
-        return "session_expired"
+        return "session_expired", "session_expired"
     if "no published articles found" in lower:
-        return "no_article"
-    if "ambiguous or not found" in lower or "not found" in lower:
-        return "not_found"
-    return "error"
+        return "no_article", "no_article"
+    if "ambiguous or not found" in lower:
+        return "pending_review", "exact_name_unresolved"
+    if "not found" in lower:
+        return "not_found", "exact_name_not_found"
+    return "error", "upstream_error"
 
 
 def extract_with_upstream(
@@ -132,16 +139,16 @@ def extract_with_upstream(
 ) -> dict:
     node = shutil.which("node")
     if not node:
-        return {"ok": False, "status": "error", "message": "缺少 node 命令"}
+        return {"ok": False, "status": "error", "error_code": "node_missing", "message": "缺少 node 命令"}
     try:
         proc = _run(
             [node, str(adapter_script), str(upstream.extractor_script), article_url],
             timeout=timeout,
         )
     except subprocess.TimeoutExpired:
-        return {"ok": False, "status": "error", "message": "upstream extractor timed out"}
+        return {"ok": False, "status": "error", "error_code": "extractor_timeout", "message": "upstream extractor timed out"}
     except OSError as exc:
-        return {"ok": False, "status": "error", "message": f"启动 upstream extractor 失败：{exc}"}
+        return {"ok": False, "status": "error", "error_code": "extractor_start_failed", "message": f"启动 upstream extractor 失败：{exc}"}
 
     payload = _last_json_line(proc.stdout)
     if proc.returncode == 0 and payload.get("ok") is True:
@@ -153,9 +160,11 @@ def extract_with_upstream(
     except (TypeError, ValueError):
         code_int = None
     combined = "\n".join([proc.stdout, proc.stderr, str(payload.get("message", ""))])
+    status, error_code = EXTRACTOR_STATUS_BY_CODE.get(code_int, _classify_error(combined))
     return {
         "ok": False,
-        "status": EXTRACTOR_STATUS_BY_CODE.get(code_int, _classify_error(combined)),
+        "status": status,
+        "error_code": error_code,
         "code": code_int,
         "message": payload.get("message") or proc.stderr.strip() or "upstream extractor failed",
     }
@@ -191,16 +200,18 @@ def discover_with_upstream(
     try:
         proc = _run(cmd, timeout=timeout)
     except subprocess.TimeoutExpired:
-        return {"ok": False, "status": "error", "message": "upstream archive discovery timed out"}
+        return {"ok": False, "status": "error", "error_code": "archive_timeout", "message": "upstream archive discovery timed out"}
     except OSError as exc:
-        return {"ok": False, "status": "error", "message": f"启动 upstream archive 失败：{exc}"}
+        return {"ok": False, "status": "error", "error_code": "archive_start_failed", "message": f"启动 upstream archive 失败：{exc}"}
 
     summary = _last_json_line(proc.stdout)
     if proc.returncode != 0:
         combined = "\n".join([proc.stdout, proc.stderr])
+        status, error_code = _classify_error(combined)
         return {
             "ok": False,
-            "status": _classify_error(combined),
+            "status": status,
+            "error_code": error_code,
             "message": proc.stderr.strip() or proc.stdout.strip() or "upstream discovery failed",
         }
     rows: list[dict] = []
@@ -260,14 +271,67 @@ def validate_homepage(
     }
 
 
-def _finish_identity(result: dict, biz: str, resolved_by: str) -> dict:
-    result["biz"] = biz
-    result["homepage_url"] = build_homepage_url(biz)
+def _set_fallback(result: dict, url: str, title: str = "") -> None:
+    result["fallback_article_url"] = str(url or "").strip()
+    result["fallback_article_title"] = str(title or "").strip()
+    result["fallback_status"] = "present" if result["fallback_article_url"] else "missing"
+
+
+def _finish_homepage_identity(result: dict, biz: str, resolved_by: str) -> dict:
+    result["biz"] = str(biz or "").strip()
+    result["homepage_url"] = build_homepage_url(result["biz"])
+    result["target_type"] = "homepage"
+    result["target_url"] = result["homepage_url"]
     result["identity_status"] = "resolved"
     result["bookmark_status"] = "unverified"
     result["resolved_by"] = resolved_by
+    result["error_code"] = ""
     result["last_verified_at"] = now_iso()
     return result
+
+
+def _finish_article_identity(result: dict, resolved_by: str) -> dict:
+    if not result.get("fallback_article_url"):
+        raise ValueError("article identity requires fallback_article_url")
+    result["target_type"] = "article"
+    result["target_url"] = result["fallback_article_url"]
+    result["identity_status"] = "resolved"
+    result["bookmark_status"] = "unverified"
+    result["fallback_status"] = "present"
+    result["resolved_by"] = resolved_by
+    result["error_code"] = ""
+    result["last_verified_at"] = now_iso()
+    return result
+
+
+def _apply_extracted_identity(result: dict, entry: InputEntry, extracted: dict, resolved_by: str) -> dict:
+    current_name = str(extracted.get("account_name", "") or "").strip()
+    result.update(
+        {
+            "current_name": current_name,
+            "alias": str(extracted.get("account_alias", "") or "").strip(),
+            "account_id": str(extracted.get("account_id", "") or "").strip(),
+        }
+    )
+    extracted_url = str(extracted.get("msg_link", "") or result.get("fallback_article_url", "") or entry.url).strip()
+    _set_fallback(result, extracted_url, str(extracted.get("msg_title", "") or result.get("fallback_article_title", "")))
+
+    if not current_name:
+        result["identity_status"] = "pending_review"
+        result["error_code"] = "article_name_unavailable"
+        result["error"] = "文章可解析，但上游未返回公众号名称，无法核对 Excel 名称"
+        return result
+    if current_name != entry.name.strip():
+        result["biz"] = str(extracted.get("account_biz", "") or parse_biz_from_url(extracted_url)).strip()
+        result["identity_status"] = "pending_review"
+        result["error_code"] = "article_name_mismatch"
+        result["error"] = f"文章公众号名称“{current_name}”与输入名称“{entry.name}”不一致"
+        return result
+
+    biz = str(extracted.get("account_biz", "") or parse_biz_from_url(extracted_url)).strip()
+    if biz:
+        return _finish_homepage_identity(result, biz, resolved_by)
+    return _finish_article_identity(result, resolved_by + "+article")
 
 
 def resolve_entry(
@@ -282,40 +346,29 @@ def resolve_entry(
     result = blank_result(entry)
 
     if entry.biz:
-        result["current_name"] = entry.name
-        _finish_identity(result, entry.biz, "input_biz")
+        # A supplied biz is a strong identity anchor, but it does not prove that
+        # the input display name is the current public-account name.
+        result["current_name"] = ""
+        _finish_homepage_identity(result, entry.biz, "input_biz")
     elif entry.url:
-        biz = parse_biz_from_url(entry.url)
-        if biz:
-            result["current_name"] = entry.name
-            result["fallback_article_url"] = entry.url
-            _finish_identity(result, biz, "input_article_url")
-        else:
-            if upstream is None:
-                result["error"] = "输入 URL 不含 biz，且未启用上游 extractor"
-                return result
-            extracted = extract_with_upstream(upstream, adapter_script, entry.url)
-            if not extracted.get("ok"):
-                result["identity_status"] = extracted.get("status", "error")
-                result["error"] = extracted.get("message", "")
-                return result
-            biz = str(extracted.get("account_biz", "") or "").strip()
-            if not biz:
-                result["identity_status"] = "biz_not_found"
-                result["error"] = "上游 extractor 未返回 account_biz"
-                return result
-            result.update(
-                {
-                    "current_name": str(extracted.get("account_name", "") or entry.name),
-                    "alias": str(extracted.get("account_alias", "") or ""),
-                    "account_id": str(extracted.get("account_id", "") or ""),
-                    "fallback_article_url": str(extracted.get("msg_link", "") or entry.url),
-                    "fallback_article_title": str(extracted.get("msg_title", "") or ""),
-                }
-            )
-            _finish_identity(result, biz, "upstream_extractor")
+        _set_fallback(result, entry.url)
+        if upstream is None:
+            result["identity_status"] = "pending_review"
+            result["error_code"] = "article_identity_unverified"
+            result["error"] = "文章 URL 尚未通过上游 extractor 核对公众号名称"
+            return result
+
+        extracted = extract_with_upstream(upstream, adapter_script, entry.url)
+        if not extracted.get("ok"):
+            result["identity_status"] = extracted.get("status", "error")
+            result["error_code"] = extracted.get("error_code", "upstream_error")
+            result["error"] = extracted.get("message", "")
+            return result
+        result = _apply_extracted_identity(result, entry, extracted, "upstream_extractor")
     else:
         if upstream is None:
+            result["identity_status"] = "error"
+            result["error_code"] = "archive_missing"
             result["error"] = "名称检索需要上游 wechat-article-archive-skill"
             return result
         discovered = discover_with_upstream(
@@ -327,49 +380,58 @@ def resolve_entry(
         )
         if not discovered.get("ok"):
             result["identity_status"] = discovered.get("status", "error")
+            result["error_code"] = discovered.get("error_code", "upstream_error")
             result["error"] = discovered.get("message", "")
             return result
 
         summary = discovered.get("summary") or {}
-        result["current_name"] = str(summary.get("account", "") or entry.name)
-        result["fakeid"] = str(summary.get("fakeid", "") or "")
+        result["current_name"] = str(summary.get("account", "") or entry.name).strip()
+        result["fakeid"] = str(summary.get("fakeid", "") or "").strip()
         rows = discovered.get("rows") or []
+        first_article_url = ""
+        first_article_title = ""
+
         for row in rows:
             article_url = str(row.get("url", "") or "").strip()
             if not article_url:
                 continue
+            if not first_article_url:
+                first_article_url = article_url
+                first_article_title = str(row.get("title", "") or "").strip()
             biz = str(row.get("biz", "") or "").strip() or parse_biz_from_url(article_url)
             if biz:
-                result["fallback_article_url"] = article_url
-                result["fallback_article_title"] = str(row.get("title", "") or "")
-                _finish_identity(result, biz, "upstream_archive")
+                _set_fallback(result, article_url, str(row.get("title", "") or ""))
+                _finish_homepage_identity(result, biz, "upstream_archive")
                 break
+
             extracted = extract_with_upstream(upstream, adapter_script, article_url)
-            if extracted.get("ok") and extracted.get("account_biz"):
-                result.update(
-                    {
-                        "current_name": str(extracted.get("account_name", "") or result["current_name"]),
-                        "alias": str(extracted.get("account_alias", "") or ""),
-                        "account_id": str(extracted.get("account_id", "") or ""),
-                        "fallback_article_url": str(extracted.get("msg_link", "") or article_url),
-                        "fallback_article_title": str(extracted.get("msg_title", "") or row.get("title", "") or ""),
-                    }
-                )
-                _finish_identity(result, str(extracted["account_biz"]), "upstream_archive+extractor")
-                break
-            if extracted.get("status") == "rate_limited":
-                result["identity_status"] = "rate_limited"
+            if extracted.get("ok"):
+                candidate = _apply_extracted_identity(result, entry, extracted, "upstream_archive+extractor")
+                if candidate.get("identity_status") in {"resolved", "pending_review"}:
+                    result = candidate
+                    break
+            elif extracted.get("status") in {"rate_limited", "session_expired", "inactive", "migrated"}:
+                result["identity_status"] = extracted.get("status", "error")
+                result["error_code"] = extracted.get("error_code", "upstream_error")
                 result["error"] = extracted.get("message", "")
                 return result
-        if result["identity_status"] != "resolved":
+
+        if result["identity_status"] == "unresolved" and first_article_url:
+            # The archive skill already selected an exact account name/fakeid;
+            # an article from that exact account is a valid clickable fallback
+            # even when no biz could be extracted.
+            _set_fallback(result, first_article_url, first_article_title)
+            _finish_article_identity(result, "upstream_archive_article")
+        elif result["identity_status"] == "unresolved":
             result["identity_status"] = "biz_not_found"
-            result["error"] = "上游历史列表存在，但候选文章未能解析出 biz"
+            result["error_code"] = "no_clickable_article"
+            result["error"] = "上游历史列表没有可用于主页或文章书签的 URL"
             return result
 
-    if validate and result.get("homepage_url"):
+    if validate and result.get("target_type") == "homepage" and result.get("homepage_url"):
         validation = validate_homepage(
             str(result["homepage_url"]),
-            expected_name=str(result.get("current_name", "") or entry.name),
+            expected_name=str(result.get("current_name", "") or ""),
         )
         result.update(validation)
         result["last_verified_at"] = now_iso()
