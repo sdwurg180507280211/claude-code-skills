@@ -5,13 +5,15 @@
 ### Added
 - `wechat-android-shortcuts`：从浏览器书签 Skill 中拆出的独立 Android 真机自动化 Skill，通过 ADB + 微信 UI + macOS Vision OCR 调用微信官方“添加到桌面”。
 - `wechat-android-shortcuts/tests/test_core.py`：离线覆盖设备列表解析、名称匹配、候选排序、Activity 解析和输入法恢复逻辑。
+- `wechat-ios-shortcuts`：把公众号名称 + HTTP/HTTPS 目标 URL 批量生成 Apple Web Clip `.mobileconfig`，用于 iPhone/iPad 主屏幕图标；可直接读取 `wechat-account-bookmarks` 输出的 `wechat_accounts.csv`。
+- `wechat-ios-shortcuts/tests/test_generate_webclips.py`：离线覆盖输入列识别、重复/无效 URL 过滤、多 Web Clip payload 和 PNG 图标嵌入。
 
 ### Changed
 - `wechat-account-bookmarks` 回归单一职责，只负责公众号身份 / 文章 URL / `biz` → Edge / Chrome 主页或文章书签。
 - `wechat-android-shortcuts/scripts/batch_add_wechat.py` 收敛为唯一批量入口，删除拆分时遗留的 `_batch_add_wechat_impl.py` 包装层。
 - Android 批量脚本不再包含开发机绝对路径、固定设备 serial 或固定搜狗输入法；单设备自动选择 serial，多设备要求 `ANDROID_SERIAL`。
 - Android 批量脚本运行前记录系统当前默认输入法，并在正常结束或异常后通过 `try/finally` 恢复原输入法。
-- GitHub Actions 新增 `wechat-android-shortcuts` 离线测试。
+- GitHub Actions 新增 `wechat-android-shortcuts` 离线测试，并增加 `wechat-ios-shortcuts` 依赖安装、编译和离线测试。
 
 ## 2026-08-16
 
