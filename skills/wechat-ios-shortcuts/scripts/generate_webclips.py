@@ -15,32 +15,20 @@ from urllib.parse import urlparse
 
 try:
     from openpyxl import load_workbook
-except ImportError:  # pragma: no cover - surfaced as a friendly CLI error
+except ImportError:  # pragma: no cover
     load_workbook = None
 
 NAME_CANDIDATES = [
-    "current_name",
     "original_name",
+    "current_name",
     "公众号名称",
     "快捷方式名称",
     "名称",
     "name",
     "label",
 ]
-URL_CANDIDATES = [
-    "target_url",
-    "URL",
-    "url",
-    "链接",
-    "文章URL",
-    "主页URL",
-]
-ICON_CANDIDATES = [
-    "icon_path",
-    "图标路径",
-    "头像路径",
-    "icon",
-]
+URL_CANDIDATES = ["target_url", "URL", "url", "链接", "文章URL", "主页URL"]
+ICON_CANDIDATES = ["icon_path", "图标路径", "头像路径", "icon"]
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 
 
@@ -90,7 +78,11 @@ def read_xlsx_rows(path: Path, sheet: str | None) -> list[dict[str, str]]:
     headers = [str(v or "").strip() for v in raw_headers]
     rows: list[dict[str, str]] = []
     for raw in values:
-        row = {headers[i]: str(raw[i] or "").strip() for i in range(min(len(headers), len(raw))) if headers[i]}
+        row = {
+            headers[i]: str(raw[i] or "").strip()
+            for i in range(min(len(headers), len(raw)))
+            if headers[i]
+        }
         if any(row.values()):
             rows.append(row)
     return rows
@@ -256,7 +248,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="批量生成 iOS 微信公众号 Web Clip .mobileconfig")
     parser.add_argument("--input", required=True, help="输入 .csv / .xlsx；可直接使用 wechat-account-bookmarks 的 wechat_accounts.csv")
     parser.add_argument("--sheet", default=None, help="Excel Sheet；默认第一个")
-    parser.add_argument("--name-column", default=None, help="名称列；默认自动识别 current_name/original_name/公众号名称/快捷方式名称")
+    parser.add_argument("--name-column", default=None, help="名称列；默认自动识别 original_name/current_name/公众号名称/快捷方式名称")
     parser.add_argument("--url-column", default=None, help="URL 列；默认优先识别 target_url")
     parser.add_argument("--icon-column", default=None, help="可选 PNG 图标路径列；相对路径以输入文件目录为基准")
     parser.add_argument("--output", default="wechat-ios-webclips.mobileconfig", help="输出 .mobileconfig")
