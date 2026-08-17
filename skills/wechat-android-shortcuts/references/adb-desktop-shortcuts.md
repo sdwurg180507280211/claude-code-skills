@@ -115,7 +115,8 @@ OCR 查看联想结果，点击目标公众号。适合能通过拼音联想的�
 # 安装失败 INSTALL_FAILED_USER_RESTRICTED 时，让用户允许 USB 安装后重试
 adb install -r /tmp/ADBKeyBoard.apk
 
-# 启用并设为当前输入法
+# 先记录用户当前输入法，再切换 ADBKeyBoard
+ORIGINAL_IME=$(adb shell settings get secure default_input_method | tr -d '\r')
 adb shell ime enable com.android.adbkeyboard/.AdbIME
 adb shell ime set com.android.adbkeyboard/.AdbIME
 ```
@@ -131,13 +132,13 @@ B64=$(printf '%s' '未来计算机二级Office' | base64)
 adb shell am broadcast -a ADB_INPUT_B64 --es msg "$B64"
 ```
 
-用完恢复原输入法：
+用完恢复**运行前实际读取到的**原输入法，不要写死某个品牌/用户的 IME：
 
 ```bash
-adb shell ime set com.sohu.inputmethod.sogou.xiaomi/.SogouIME
+adb shell ime set "$ORIGINAL_IME"
 ```
 
-注意：ADBKeyBoard 安装后默认输入法会变成它，必须恢复原 IME，否则手机正常键盘不可用。
+正式批量脚本 `scripts/batch_add_wechat.py` 已自动执行这套保存/恢复流程，并使用 `try/finally` 保证异常退出时也尽量恢复。
 
 ### 5. 清空搜索框与切换筛选
 

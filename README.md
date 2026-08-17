@@ -89,7 +89,7 @@ python3 scripts/validate_skills.py
 - 是否误提交缓存、虚拟环境、运行输出等文件
 - Marketplace 是否只引用真实存在的 Skill
 - `wechat-account-bookmarks` 的核心离线测试是否通过
-- `wechat-android-shortcuts` 的 Python 脚本是否可编译
+- `wechat-android-shortcuts` 的 Python 脚本是否可编译、核心离线测试是否通过
 
 ## 维护原则
 

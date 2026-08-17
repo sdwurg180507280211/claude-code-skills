@@ -25,13 +25,16 @@ wechat-android-shortcuts/
 ├── README.md
 ├── references/
 │   └── adb-desktop-shortcuts.md
-└── scripts/
-    ├── batch_add_wechat.py
-    ├── _batch_add_wechat_impl.py
-    └── ocr_wechat.swift
+├── scripts/
+│   ├── batch_add_wechat.py
+│   └── ocr_wechat.swift
+└── tests/
+    └── test_core.py
 ```
 
-`batch_add_wechat.py` 是可移植入口：自动使用当前 Skill 内的 OCR 脚本，并在只连接一台 Android 设备时自动选择 serial。原有已验证的微信 UI 自动化实现保存在 `_batch_add_wechat_impl.py`。
+`batch_add_wechat.py` 是唯一批量入口，不再依赖拆分时遗留的 `_impl` 包装层，也不包含开发机绝对路径或固定设备 serial。默认使用当前 Skill 内的 OCR 脚本；仅连接一台 Android 设备时自动选择 serial，多设备时要求显式设置 `ANDROID_SERIAL`。
+
+运行前会读取当前默认输入法，临时切换到 ADBKeyBoard，并通过 `try/finally` 在批量任务结束或异常后恢复原输入法，不再硬编码某台手机的搜狗输入法。
 
 ## 环境要求
 
@@ -70,6 +73,7 @@ python3 scripts/batch_add_wechat.py 公众号1 公众号2
 ADB_PATH=/path/to/adb \
 ANDROID_SERIAL=<serial> \
 OCR_SCRIPT=/path/to/ocr_wechat.swift \
+ADB_KEYBOARD_IME=com.android.adbkeyboard/.AdbIME \
 python3 scripts/batch_add_wechat.py 公众号1 公众号2
 ```
 
@@ -106,6 +110,16 @@ swift scripts/ocr_wechat.swift /tmp/screen.png
 → 向左滑
 → 添加到桌面
 ```
+
+## 离线测试
+
+无需连接手机即可验证设备列表解析、名称匹配、候选排序、Activity 解析和输入法恢复逻辑：
+
+```bash
+python3 -m unittest discover -s tests -v
+```
+
+GitHub Actions 会同时执行 Python 编译检查和这组离线测试；真实微信 UI / ROM / 分辨率兼容性仍需真机验证。
 
 ## 详细经验
 

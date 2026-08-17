@@ -17,6 +17,8 @@
 4. 新增或删除 Skill 时同步更新 `README.md`、`.claude-plugin/marketplace.json` 和 `CHANGELOG.md`。
 5. 提交前运行 `python3 scripts/validate_skills.py`，并运行对应 Skill 的测试。
 
-## WeChat Skill
+## WeChat Skills
 
-`wechat-account-bookmarks` 只使用正常扫码登录与公开可访问的公众号/文章数据，不绕过验证码、登录限制、访问控制、频率限制或微信风控。
+- `wechat-account-bookmarks` 只负责微信公众号身份 / 文章 / `biz` 到 Edge / Chrome 书签的编排与输出；微信侧复杂发现和文章解析优先复用固定版本的苍何上游 Skill。只使用正常扫码登录与公开可访问数据，不绕过验证码、登录限制、访问控制、频率限制或微信风控。
+- `wechat-android-shortcuts` 只负责 Android 真机上的微信“添加到桌面”自动化；使用 ADB + OCR 操作官方 UI，不修改微信数据库、不伪造 ShortcutInfo，不与 `wechat-account-bookmarks` 互相 import。
+- Android 脚本不得提交开发机绝对路径、固定设备 serial、固定用户输入法；设备和工具路径通过自动发现或环境变量提供，临时切换输入法后必须恢复运行前的默认输入法。
