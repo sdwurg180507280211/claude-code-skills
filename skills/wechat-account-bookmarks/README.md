@@ -1,6 +1,8 @@
 # WeChat Account Bookmarks Skill
 
-批量把微信公众号名称、历史文章 URL 或已知 `biz` 转成 Microsoft Edge / Google Chrome 可导入的公众号书签。最终书签优先指向公众号主页；无法形成主页但已经确认到该公众号文章时，可直接以文章 URL 作为可点击目标。
+批量把微信公众号名称、历史文章 URL 或已知 `biz` 转成 Microsoft Edge / Google Chrome 可导入的公众号书签。最终书签优先指向公众号主页；无法形成主页但已经确认到该公众号文章时，可直接以文章 URL 作为可点击目标。也支持通过 `--prefer-article` / `--target article` / 输入列 `目标类型` 强制把书签指向公众号文章，适合浏览器无法打开公众号主页的场景。
+
+此外还支持通过 ADB 在 Android 手机桌面上用微信官方“添加到桌面”流程创建/检查微信公众号快捷方式，详见 `references/adb-desktop-shortcuts.md`。
 
 ## 架构
 
@@ -11,9 +13,86 @@
 
 `freestylefly/canghe-skills` 中的 `skills/canghe-wechat-article-extractor` 本身就是 submodule，并指向同一份 extractor 实现。本 Skill 不复制维护微信解析器，只维护 Excel/CSV 输入、结果编排、书签输出、状态与校验。
 
+## Android 桌面快捷方式（ADB）
+
+需要直接在 Android 手机桌面创建/检查微信公众号图标时，使用微信官方“添加到桌面”流程，而不是伪造 ShortcutInfo：
+
+```text
+打开微信
+→ 搜索公众号（ADB 输入拼音或 ADBKeyBoard 中文）
+→ 进入公众号主页
+→ 如未关注，先“关注服务号/关注公众号”
+→ 关注后微信会进入聊天界面
+→ 点右上角头像回到简介页
+→ 再点右上角“•••”
+→ “设置”
+→ “添加到桌面”
+→ 返回桌面验证 Chat_User=gh_...
+```
+
+微信界面屏蔽 `uiautomator dump`，因此用截图 + macOS Vision OCR 定位按钮。
+
+常见操作技巧：
+
+- 搜索框有旧文字时，点右侧 `x` 清空，不需要返回；
+- 默认搜索结果没有公众号时，小幅向左滑动搜索框下方的筛选行，露出“账号”（不要大幅滑，否则会滑过头）；
+- 关注后进入聊天界面，点右上角头像回到简介页，再点“•••”；
+- 已关注的公众号直接点右上角“•••”，不用再点关注；
+- 批量连续添加时，添加完一个直接继续搜索下一个，最后再统一核对；
+- 账号筛选也找不到时，大概率已失效/改名/未收录，跳过即可；
+- 搜索优先级：公众号 > 视频号 > 小程序；小程序优先级最低但会尝试添加；
+- 小程序添加流程：进入小程序 → 右上角“•••” → 底部“转发给朋友”行 → 向左滑动 → 右侧“添加到桌面/添加到” → 点击 → 右下角返回；
+- 输入后直接点顶部“搜索”按钮，不要点键盘搜索键；
+- 账号筛选里点“不限”通常能让公众号显示在最上面；
+- 点“账号”后，第一个结果不一定是公众号，可能是视频号/小程序；公众号可能在下面，优先找带“公众号/服务号/媒体”标签的结果；
+- 公众号名称不全时用模糊匹配（前缀/关键字），不要要求完整名称完全一致；模糊匹配只用于找候选，进入资料页后必须二次验证完整名称/主体/简介/gh_ ID 或 URL/biz，验证不通过不添加；
+- 有些视频号右上角“•••”没有“设置”，无法添加到桌面，直接跳过；
+- 如果进入视频号资料页但有“公众号：xxx”入口，先点入口进入真正公众号设置页；
+- Excel 里的名称可能是小程序/视频号；小程序优先级最低但会尝试添加，视频号优先级高于小程序但低于公众号；
+- 不要用一条 `adb shell` 串联“输入框 + 清空 + 输入广播”，中文输入会不稳定，应分步执行；
+- “添加到桌面”的 y 坐标见过 `812`、`1017`、`1221`、`1360`，必须 OCR 确认。
+
+已知限制：MIUI 通过 ADB 模拟长按拖动创建文件夹目前不可靠，建文件夹建议手动操作；小程序优先级最低，但会尝试添加。
+
+## 批量脚本使用
+
+```bash
+python3 scripts/batch_add_wechat.py 公众号1 公众号2 公众号3 ...
+```
+
+跨设备时可通过环境变量覆盖：
+
+```bash
+ADB_PATH=/path/to/adb \
+ANDROID_SERIAL=<serial> \
+OCR_SCRIPT=/path/to/ocr_wechat.swift \
+python3 scripts/batch_add_wechat.py 公众号1 公众号2 ...
+```
+
+脚本运行前，手机应停在**微信内、上一个公众号的设置页或简介页**（保证按一次返回能回到简介页，并能点右上角 Q 搜索）。
+
+脚本会自动：
+
+```text
+返回 → 点 Q → 输入 → 点匹配项 → 切“账号” → 找公众号/服务号/媒体
+→ 关注（已关注则跳过）→ 进入设置 → 添加到桌面
+→ 继续下一个
+```
+
+完整命令和脚本：
+
+```text
+references/adb-desktop-shortcuts.md
+scripts/ocr_wechat.swift
+scripts/batch_add_wechat.py
+```
+
 ## 解析优先级
 
 ```text
+用户指定 article（--prefer-article / 目标类型=article）
+→ 即使有 biz，也生成文章 target
+
 已有 biz
 → 直接构造主页 target
 → 名称本身标记为“未通过文章核验”
@@ -35,13 +114,13 @@
 ## 输入示例
 
 ```text
-快捷方式名称    文件夹结构          URL                                      biz
-财新            桌面 > 财经新闻    https://mp.weixin.qq.com/s?__biz=...     
+快捷方式名称    文件夹结构          URL                                      biz        目标类型
+财新            桌面 > 财经新闻    https://mp.weixin.qq.com/s?__biz=...               article
 证券时报        桌面 > 财经新闻                                             Mz...
 iNature         桌面 > 科研学术                                             
 ```
 
-名称列必需；URL 和 biz 都是可选增强信息。
+名称列必需；URL、biz、目标类型都是可选增强信息。`目标类型` 取值 `auto` / `homepage` / `article`，也自动识别 `target_type`、`书签目标` 等列名。
 
 ## 环境要求
 
@@ -116,6 +195,19 @@ python3 scripts/generate_bookmarks.py \
   --biz-column biz \
   --output-dir output
 ```
+
+## 强制生成文章书签
+
+浏览器无法打开公众号主页时，可以用 `--prefer-article` 或 `--target article` 让所有书签指向公众号文章：
+
+```bash
+python3 scripts/generate_bookmarks.py \
+  --input accounts.xlsx \
+  --prefer-article \
+  --output-dir output-article
+```
+
+也可以在输入表加 `目标类型` 列，值填 `article`，按行控制。`--target article` 是全局默认，行内 `auto` 会继承全局值，行内显式 `article` / `homepage` 优先生效。
 
 ## 上游依赖
 
@@ -200,6 +292,7 @@ article_identity_unverified
 exact_name_unresolved
 exact_name_not_found
 no_article
+no_homepage
 session_expired
 upstream_error
 ```
@@ -217,9 +310,13 @@ target_url
 规则：
 
 ```text
-有可信 biz → target_type=homepage → target_url=homepage_url
-没有主页但已有可信文章 → target_type=article → target_url=fallback_article_url
+用户指定 article → target_type=article → target_url=fallback_article_url（即使有 biz）
+用户指定 homepage → target_type=homepage → target_url=homepage_url
+有可信 biz（auto） → target_type=homepage → target_url=homepage_url
+没有主页但已有可信文章（auto） → target_type=article → target_url=fallback_article_url
 ```
+
+强制 `article` 但没有可用文章 URL 时，不降级生成主页书签，而是标记 `no_article`；强制 `homepage` 但没有主页时标记 `biz_not_found` / `no_homepage`。
 
 已知 biz 可以完全离线生成主页书签，但因为没有自动获取备用文章，会标记：
 
@@ -240,7 +337,7 @@ https://mp.weixin.qq.com/mp/profile_ext?action=home&__biz=<biz>&scene=124#wechat
 `state.json` 当前 schema 为 v3，并保存 identity fingerprint：
 
 - 只改文件夹结构不会让身份缓存失效
-- 名称、URL、biz 变化时不会错误复用旧身份
+- 名称、URL、biz、目标类型变化时不会错误复用旧身份/旧目标
 - `--retry-unresolved`：重试未解析项
 - `--no-resume`：全部重跑
 

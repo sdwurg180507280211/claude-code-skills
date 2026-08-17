@@ -1,13 +1,23 @@
 ---
 name: wechat-account-bookmarks
-description: 批量把微信公众号名称、历史文章 URL 或已知 biz 转换为可直接导入 Edge/Chrome 的公众号主页或文章书签。优先复用 freestylefly 的 wechat-article-archive-skill 与 wechat-article-extractor-skill，不重复实现微信搜索、文章历史和复杂页面解析。适用于“恢复微信公众号快捷方式”“Excel 批量生成公众号书签”“公众号名称跳转主页或文章”等任务；不绕过登录、验证码或微信风控。
+description: 批量把微信公众号名称、历史文章 URL 或已知 biz 转换为可直接导入 Edge/Chrome 的公众号主页或文章书签；也支持通过 ADB 在 Android 手机桌面上用微信官方“添加到桌面”流程创建/检查微信公众号快捷方式。优先复用 freestylefly 的 wechat-article-archive-skill 与 wechat-article-extractor-skill，不重复实现微信搜索、文章历史和复杂页面解析。适用于“恢复微信公众号快捷方式”“Excel 批量生成公众号书签”“公众号名称跳转主页或文章”“ADB 创建微信公众账号桌面图标”“检查桌面微信快捷方式内部结构”等任务；不绕过登录、验证码或微信风控。
 ---
 
 # 微信公众号批量书签生成
 
+## 两种工作模式
+
+1. **浏览器书签模式（默认）**：Excel/CSV → Edge/Chrome 可导入的 `bookmarks.html`。
+2. **Android 桌面快捷方式模式**：通过 ADB 操作微信官方“添加到桌面”，在手机桌面生成真实公众号图标。
+
+模式 2 的完整流程见 `references/adb-desktop-shortcuts.md`，OCR 脚本见 `scripts/ocr_wechat.swift`，批量连续添加脚本见 `scripts/batch_add_wechat.py`。
+
 ## 定位
 
-本 Skill 只负责“输入编排 + 公众号身份结果统一 + 浏览器书签输出”。
+本 Skill 负责两条输出链路：
+
+- 浏览器书签：输入编排 + 公众号身份结果统一 + `bookmarks.html` 输出。
+- Android 桌面图标：通过 ADB 驱动微信官方“添加到桌面”，并验证 `Chat_User=gh_...`。
 
 微信侧复杂能力直接复用上游：
 
@@ -28,6 +38,9 @@ target_url  = 最终写入 bookmarks.html 的 URL
 优先级：
 
 ```text
+用户指定目标类型 article（--prefer-article / 目标类型=article）
+→ 即使有 biz，也生成文章 target
+
 可信 biz
 → 公众号主页 target
 
@@ -60,6 +73,8 @@ fakeid + 候选文章
 - URL 解析出的公众号名称与 Excel 名称不一致时：`identity_status=pending_review`，`error_code=article_name_mismatch`，不得生成错误书签。
 - 纯名称路径仍要求上游 archive skill 做精确名称匹配，不做模糊猜测。
 - 如果精确账号已经找到，且有可信文章 URL，但没有 `biz`，可以生成 `target_type=article` 的文章书签。
+- 用户可通过 CLI `--target article` / `--prefer-article` 或输入列 `目标类型` 强制生成文章书签；指定 `article` 后即使已有 `biz` 也以文章 URL 为最终书签目标。
+- 强制 `article` 但没有任何可用文章 URL 时，不降级生成主页书签，而是标记 `no_article` 进入未解析/复核。
 
 ## 输入
 
@@ -68,8 +83,10 @@ fakeid + 候选文章
 常见字段：
 
 ```text
-快捷方式名称 | 文件夹结构 | URL | biz
+快捷方式名称 | 文件夹结构 | URL | biz | 目标类型
 ```
+
+`目标类型` 可选值：`auto` / `homepage` / `article`，也自动识别 `target_type`、`书签目标` 等列名。
 
 自动识别 URL 列：`URL`、`链接`、`公众号链接`、`文章链接`、`历史链接`。
 
@@ -141,6 +158,7 @@ article_identity_unverified
 exact_name_unresolved
 exact_name_not_found
 no_article
+no_homepage
 session_expired
 upstream_error
 ```
@@ -229,6 +247,19 @@ python3 scripts/generate_bookmarks.py \
   --output-dir output-test
 ```
 
+## 强制生成文章书签
+
+浏览器无法打开公众号主页时，可以用 `--prefer-article` 或 `--target article` 让所有书签指向公众号文章：
+
+```bash
+python3 scripts/generate_bookmarks.py \
+  --input accounts.xlsx \
+  --prefer-article \
+  --output-dir output-article
+```
+
+也可以在输入表加 `目标类型` 列，值填 `article`，按行控制。`--target article` 是全局默认，行内 `auto` 会继承全局值，行内显式 `article` / `homepage` 优先生效。
+
 ## 主页验证
 
 默认不额外验证每个 `profile_ext`：
@@ -250,7 +281,7 @@ python3 scripts/generate_bookmarks.py ... --validate-homepage
 `state.json` schema 为 v3。
 
 - 只改文件夹结构不会让身份缓存失效。
-- 名称、URL、biz 变化时不复用旧身份结果。
+- 名称、URL、biz、目标类型变化时不复用旧身份/旧目标结果。
 - `--retry-unresolved`：重试未解析项。
 - `--no-resume`：全部重跑。
 

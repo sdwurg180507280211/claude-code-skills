@@ -163,6 +163,90 @@ class CoreTests(unittest.TestCase):
             self.assertEqual(result["fallback_status"], "present")
             self.assertEqual(result["target_type"], "homepage")
 
+    def test_input_url_with_article_pref_forces_article_target(self):
+        with tempfile.TemporaryDirectory() as td:
+            url = "https://mp.weixin.qq.com/s?__biz=abc%3D%3D&mid=1&idx=1&sn=x"
+            entry = InputEntry("财新", "财经", url, "", "article")
+            extracted = {
+                "ok": True,
+                "account_name": "财新",
+                "account_alias": "caixin",
+                "account_id": "gh_test",
+                "account_biz": "abc==",
+                "msg_link": url,
+                "msg_title": "测试文章",
+            }
+            with patch.object(resolver, "extract_with_upstream", return_value=extracted):
+                result = resolve_entry(
+                    entry,
+                    upstream=object(),
+                    adapter_script=SCRIPTS / "extract_identity.js",
+                    session_path=Path(td) / "session.json",
+                    work_dir=Path(td),
+                    validate=False,
+                )
+            self.assertEqual(result["identity_status"], "resolved")
+            self.assertEqual(result["current_name"], "财新")
+            self.assertEqual(result["biz"], "abc==")
+            self.assertEqual(result["target_type"], "article")
+            self.assertEqual(result["target_url"], url)
+            self.assertEqual(result["fallback_status"], "present")
+
+    def test_input_biz_with_url_and_article_pref_verifies_url_and_uses_article(self):
+        with tempfile.TemporaryDirectory() as td:
+            url = "https://mp.weixin.qq.com/s?__biz=abc%3D%3D&mid=1&idx=1&sn=x"
+            entry = InputEntry("财新", "财经", url, "abc==", "article")
+            extracted = {
+                "ok": True,
+                "account_name": "财新",
+                "account_alias": "caixin",
+                "account_id": "gh_test",
+                "account_biz": "abc==",
+                "msg_link": url,
+                "msg_title": "测试文章",
+            }
+            with patch.object(resolver, "extract_with_upstream", return_value=extracted):
+                result = resolve_entry(
+                    entry,
+                    upstream=object(),
+                    adapter_script=SCRIPTS / "extract_identity.js",
+                    session_path=Path(td) / "session.json",
+                    work_dir=Path(td),
+                    validate=False,
+                )
+            self.assertEqual(result["identity_status"], "resolved")
+            self.assertEqual(result["biz"], "abc==")
+            self.assertEqual(result["target_type"], "article")
+            self.assertEqual(result["target_url"], url)
+
+    def test_input_biz_with_article_pref_but_no_article_is_no_article(self):
+        with tempfile.TemporaryDirectory() as td:
+            entry = InputEntry("财新", "财经", "", "abc==", "article")
+            result = resolve_entry(
+                entry,
+                upstream=None,
+                adapter_script=SCRIPTS / "extract_identity.js",
+                session_path=Path(td) / "session.json",
+                work_dir=Path(td),
+                validate=False,
+            )
+            self.assertEqual(result["identity_status"], "no_article")
+            self.assertEqual(result["error_code"], "no_article")
+            self.assertEqual(result["target_url"], "")
+            self.assertEqual(result["target_type"], "")
+
+    def test_csv_input_reads_target_pref(self):
+        with tempfile.TemporaryDirectory() as td:
+            path = Path(td) / "accounts.csv"
+            path.write_text(
+                "公众号名称,分类,URL,biz,目标类型\n财新,桌面 > 财经新闻,https://mp.weixin.qq.com/s?__biz=abc,abc,article\n",
+                encoding="utf-8-sig",
+            )
+            entries, meta = load_entries(path)
+            self.assertEqual(entries[0].name, "财新")
+            self.assertEqual(entries[0].target_pref, "article")
+            self.assertEqual(meta["target_column"], "目标类型")
+
     def test_input_url_name_mismatch_goes_pending_review(self):
         with tempfile.TemporaryDirectory() as td:
             url = "https://mp.weixin.qq.com/s?__biz=abc%3D%3D&mid=1&idx=1&sn=x"

@@ -16,7 +16,7 @@ from urllib.parse import parse_qs, unquote, urlsplit
 import requests
 
 from bookmarks import build_homepage_url
-from io_utils import InputEntry
+from io_utils import InputEntry, normalize_target_pref
 from upstream import UpstreamPaths
 
 
@@ -304,6 +304,57 @@ def _finish_article_identity(result: dict, resolved_by: str) -> dict:
     return result
 
 
+def _apply_target_preference(result: dict, entry: InputEntry) -> dict:
+    """Apply per-row/CLI target preference to an already resolved identity.
+
+    ``auto`` keeps the existing priority (homepage when possible, else article).
+    ``article`` forces the bookmark to a verified article URL.
+    ``homepage`` forces the bookmark to the profile homepage URL.
+    """
+    pref = normalize_target_pref(entry.target_pref)
+    if pref == "auto":
+        return result
+
+    fallback = str(result.get("fallback_article_url", "") or "").strip()
+    homepage = str(result.get("homepage_url", "") or "").strip()
+
+    if pref == "article":
+        if fallback:
+            result["target_type"] = "article"
+            result["target_url"] = fallback
+            result["fallback_status"] = "present"
+            result["bookmark_status"] = "unverified"
+        else:
+            result.update(
+                {
+                    "identity_status": "no_article",
+                    "error_code": "no_article",
+                    "error": "要求生成文章书签，但没有可用的公众号文章 URL",
+                    "target_type": "",
+                    "target_url": "",
+                    "bookmark_status": "not_available",
+                    "fallback_status": "missing",
+                }
+            )
+    elif pref == "homepage":
+        if homepage:
+            result["target_type"] = "homepage"
+            result["target_url"] = homepage
+            result["bookmark_status"] = "unverified"
+        else:
+            result.update(
+                {
+                    "identity_status": "biz_not_found",
+                    "error_code": "no_homepage",
+                    "error": "要求生成主页书签，但没有可信的 biz/homepage_url",
+                    "target_type": "",
+                    "target_url": "",
+                    "bookmark_status": "not_available",
+                }
+            )
+    return result
+
+
 def _apply_extracted_identity(result: dict, entry: InputEntry, extracted: dict, resolved_by: str) -> dict:
     current_name = str(extracted.get("account_name", "") or "").strip()
     result.update(
@@ -345,9 +396,12 @@ def resolve_entry(
 ) -> dict:
     result = blank_result(entry)
 
-    if entry.biz:
+    if entry.biz and not (entry.url and normalize_target_pref(entry.target_pref) == "article"):
         # A supplied biz is a strong identity anchor, but it does not prove that
         # the input display name is the current public-account name.
+        # When the user explicitly wants an article bookmark and an article URL
+        # is provided, go through the URL verification path instead so the
+        # article target is not bound blindly to the Excel row.
         result["current_name"] = ""
         _finish_homepage_identity(result, entry.biz, "input_biz")
     elif entry.url:
@@ -427,6 +481,9 @@ def resolve_entry(
             result["error_code"] = "no_clickable_article"
             result["error"] = "上游历史列表没有可用于主页或文章书签的 URL"
             return result
+
+    if result.get("identity_status") == "resolved":
+        result = _apply_target_preference(result, entry)
 
     if validate and result.get("target_type") == "homepage" and result.get("homepage_url"):
         validation = validate_homepage(

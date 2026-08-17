@@ -34,6 +34,22 @@ def unique_entries(entries: list[InputEntry]) -> list[InputEntry]:
     return list(ordered.values())
 
 
+def apply_default_target(entries: list[InputEntry], default_target: str) -> list[InputEntry]:
+    """Apply a CLI-level target default, keeping per-row non-auto preferences."""
+    if default_target == "auto":
+        return entries
+    return [
+        InputEntry(
+            entry.name,
+            entry.folder,
+            entry.url,
+            entry.biz,
+            target_pref=entry.target_pref if entry.target_pref != "auto" else default_target,
+        )
+        for entry in entries
+    ]
+
+
 def is_identity_resolved(item: dict) -> bool:
     return (
         str(item.get("identity_status", "") or "") == "resolved"
@@ -176,6 +192,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--folder-column", default=None, help="文件夹列；默认自动识别")
     parser.add_argument("--url-column", default=None, help="历史公众号文章 URL 列；默认自动识别")
     parser.add_argument("--biz-column", default=None, help="已知 biz/__biz 列；默认自动识别")
+    parser.add_argument("--target-column", default=None, help="目标类型列（auto/homepage/article）；默认自动识别")
     parser.add_argument("--output-dir", default="output", help="输出目录")
     parser.add_argument("--root-folder", default="微信公众号", help="书签根目录")
     parser.add_argument("--strip-folder-prefix", default="桌面", help="移除输入目录第一层；空字符串关闭")
@@ -185,6 +202,20 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--prepare-only", action="store_true", help="只规范化输入，不访问微信或安装上游")
     parser.add_argument("--retry-unresolved", action="store_true", help="重试 state 中未解析项")
     parser.add_argument("--no-resume", action="store_true", help="忽略 state.json 全部重跑")
+    target_group = parser.add_mutually_exclusive_group()
+    target_group.add_argument(
+        "--target",
+        choices=["auto", "homepage", "article"],
+        default="auto",
+        help="全局目标类型：auto 优先主页、article 强制文章、homepage 强制主页",
+    )
+    target_group.add_argument(
+        "--prefer-article",
+        dest="target",
+        action="store_const",
+        const="article",
+        help="等价于 --target article：所有书签强制指向公众号文章",
+    )
     parser.add_argument("--discovery-limit", type=int, default=5, help="名称搜索时最多让上游发现多少篇候选文章")
     parser.add_argument(
         "--session",
@@ -211,6 +242,7 @@ def write_normalized_input(output_dir: Path, entries: list[InputEntry]) -> dict:
             "文件夹结构": entry.folder,
             "URL": entry.url,
             "biz": entry.biz,
+            "目标类型": entry.target_pref,
             "解析优先级": (
                 "input_biz"
                 if entry.biz
@@ -222,7 +254,7 @@ def write_normalized_input(output_dir: Path, entries: list[InputEntry]) -> dict:
         for entry in unique
     ]
     path = output_dir / "input_normalized.csv"
-    fields = ["公众号名称", "文件夹结构", "URL", "biz", "解析优先级"]
+    fields = ["公众号名称", "文件夹结构", "URL", "biz", "目标类型", "解析优先级"]
     with path.open("w", encoding="utf-8-sig", newline="") as fh:
         writer = csv.DictWriter(fh, fieldnames=fields)
         writer.writeheader()
@@ -233,6 +265,8 @@ def write_normalized_input(output_dir: Path, entries: list[InputEntry]) -> dict:
         "duplicate_rows_removed": len(entries) - len(unique),
         "with_biz": sum(1 for e in unique if e.biz),
         "with_url": sum(1 for e in unique if e.url),
+        "with_article_pref": sum(1 for e in unique if e.target_pref == "article"),
+        "with_homepage_pref": sum(1 for e in unique if e.target_pref == "homepage"),
         "name_search_needed": sum(1 for e in unique if not e.biz and not e.url),
         "normalized_file": str(path.resolve()),
         "generated_at": now_iso(),
@@ -262,6 +296,7 @@ def main() -> int:
             folder_column=args.folder_column,
             url_column=args.url_column,
             biz_column=args.biz_column,
+            target_column=args.target_column,
         )
     except Exception as exc:
         print(f"读取输入失败：{exc}", file=sys.stderr)
@@ -270,6 +305,8 @@ def main() -> int:
     if not entries:
         print("输入中没有可处理的公众号名称", file=sys.stderr)
         return 2
+
+    entries = apply_default_target(entries, args.target)
 
     if args.max_items is not None:
         if args.max_items <= 0:

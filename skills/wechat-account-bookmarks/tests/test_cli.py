@@ -66,6 +66,41 @@ class CliSmokeTests(unittest.TestCase):
                 msg=f"stdout={validate.stdout}\nstderr={validate.stderr}",
             )
 
+    def test_prepare_only_target_article_applies_default(self):
+        with tempfile.TemporaryDirectory() as td:
+            td_path = Path(td)
+            input_path = td_path / "accounts.csv"
+            output_dir = td_path / "output"
+            input_path.write_text(
+                "公众号名称,分类\n测试公众号A,桌面 > 测试\n",
+                encoding="utf-8-sig",
+            )
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    str(SCRIPTS / "generate_bookmarks.py"),
+                    "--input",
+                    str(input_path),
+                    "--prepare-only",
+                    "--target",
+                    "article",
+                    "--output-dir",
+                    str(output_dir),
+                ],
+                text=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                timeout=30,
+            )
+            self.assertEqual(proc.returncode, 0, msg=f"stdout={proc.stdout}\nstderr={proc.stderr}")
+            normalized = output_dir / "input_normalized.csv"
+            self.assertTrue(normalized.is_file())
+            with normalized.open("r", encoding="utf-8-sig", newline="") as fh:
+                rows = list(csv.DictReader(fh))
+            self.assertEqual(len(rows), 1)
+            self.assertEqual(rows[0]["目标类型"], "article")
+
 
 if __name__ == "__main__":
     unittest.main()
