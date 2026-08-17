@@ -12,6 +12,7 @@
 | [`china-proxy`](skills/china-proxy) | Infrastructure | 命令行访问受阻时探测并应用本地代理 |
 | [`wechat-account-bookmarks`](skills/wechat-account-bookmarks) | Utility | 微信公众号 → Edge / Chrome 主页或文章书签 |
 | [`wechat-android-shortcuts`](skills/wechat-android-shortcuts) | Utility | ADB 驱动微信官方“添加到桌面”，创建/检查 Android 公众号或小程序快捷方式 |
+| [`wechat-ios-shortcuts`](skills/wechat-ios-shortcuts) | Utility | 名称 + URL → Apple Web Clip `.mobileconfig` → iPhone/iPad 主屏幕图标 |
 
 ## 安装
 
@@ -58,7 +59,8 @@ my-skills/
 │   ├── github-kb/
 │   ├── spec-mode/
 │   ├── wechat-account-bookmarks/
-│   └── wechat-android-shortcuts/
+│   ├── wechat-android-shortcuts/
+│   └── wechat-ios-shortcuts/
 ├── CHANGELOG.md
 ├── CLAUDE.md
 ├── CONTRIBUTING.md
@@ -90,6 +92,7 @@ python3 scripts/validate_skills.py
 - Marketplace 是否只引用真实存在的 Skill
 - `wechat-account-bookmarks` 的核心离线测试是否通过
 - `wechat-android-shortcuts` 的 Python 脚本是否可编译、核心离线测试是否通过
+- `wechat-ios-shortcuts` 的 Web Clip 生成器是否可编译、核心离线测试是否通过
 
 ## 维护原则
 
@@ -97,7 +100,7 @@ python3 scripts/validate_skills.py
 - 大型通用上游 Skill 不复制进来，优先直接使用上游版本，避免长期分叉。
 - Skill 的触发描述应足够具体，避免“只要提到 GitHub 就触发”这类过宽规则。
 - 不提交 Cookie、Token、二维码登录态、真实用户输入、运行输出或缓存。
-- 浏览器书签与 Android 设备自动化保持为两个独立 Skill，不互相 import。
+- 微信浏览器书签、Android 真机自动化和 iOS Web Clip 保持为三个独立 Skill，不互相 import。
 
 ## License
 

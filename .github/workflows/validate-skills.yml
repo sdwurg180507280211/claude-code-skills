@@ -28,3 +28,9 @@ jobs:
         run: python3 -m compileall -q skills/wechat-android-shortcuts/scripts
       - name: Run WeChat Android shortcut tests
         run: python3 -m unittest discover -s skills/wechat-android-shortcuts/tests -v
+      - name: Install WeChat iOS shortcut dependencies
+        run: pip install -r skills/wechat-ios-shortcuts/requirements.txt
+      - name: Compile WeChat iOS shortcut scripts
+        run: python3 -m compileall -q skills/wechat-ios-shortcuts/scripts
+      - name: Run WeChat iOS shortcut tests
+        run: python3 -m unittest discover -s skills/wechat-ios-shortcuts/tests -v
