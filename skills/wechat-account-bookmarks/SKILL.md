@@ -1,23 +1,23 @@
 ---
 name: wechat-account-bookmarks
-description: 批量把微信公众号名称、历史文章 URL 或已知 biz 转换为可直接导入 Edge/Chrome 的公众号主页或文章书签；也支持通过 ADB 在 Android 手机桌面上用微信官方“添加到桌面”流程创建/检查微信公众号快捷方式。优先复用 freestylefly 的 wechat-article-archive-skill 与 wechat-article-extractor-skill，不重复实现微信搜索、文章历史和复杂页面解析。适用于“恢复微信公众号快捷方式”“Excel 批量生成公众号书签”“公众号名称跳转主页或文章”“ADB 创建微信公众账号桌面图标”“检查桌面微信快捷方式内部结构”等任务；不绕过登录、验证码或微信风控。
+description: 批量把微信公众号名称、历史文章 URL 或已知 biz 转换为可直接导入 Edge/Chrome 的公众号主页或文章书签。优先复用 freestylefly 的 wechat-article-archive-skill 与 wechat-article-extractor-skill，不重复实现微信搜索、文章历史和复杂页面解析。适用于“恢复微信公众号浏览器快捷方式”“Excel 批量生成公众号书签”“公众号名称跳转主页或文章”等任务；不用于 Android ADB 桌面图标自动化，不绕过登录、验证码或微信风控。
 ---
 
 # 微信公众号批量书签生成
 
-## 两种工作模式
-
-1. **浏览器书签模式（默认）**：Excel/CSV → Edge/Chrome 可导入的 `bookmarks.html`。
-2. **Android 桌面快捷方式模式**：通过 ADB 操作微信官方“添加到桌面”，在手机桌面生成真实公众号图标。
-
-模式 2 的完整流程见 `references/adb-desktop-shortcuts.md`，OCR 脚本见 `scripts/ocr_wechat.swift`，批量连续添加脚本见 `scripts/batch_add_wechat.py`。
-
 ## 定位
 
-本 Skill 负责两条输出链路：
+本 Skill 只负责浏览器书签链路：
 
-- 浏览器书签：输入编排 + 公众号身份结果统一 + `bookmarks.html` 输出。
-- Android 桌面图标：通过 ADB 驱动微信官方“添加到桌面”，并验证 `Chat_User=gh_...`。
+```text
+Excel / CSV
+→ 公众号身份解析
+→ homepage / article target
+→ bookmarks.html
+→ Edge / Chrome
+```
+
+Android 真机上的微信“添加到桌面”已拆分到独立 Skill：`wechat-android-shortcuts`。
 
 微信侧复杂能力直接复用上游：
 
@@ -129,8 +129,6 @@ error
 
 - 所有 `bookmark_status != direct_ok` 的已解析书签，包括默认的 `unverified`；
 - 所有 `fallback_status != present` 的已解析记录。
-
-这样不能出现“大量主页从未验证，但复核清单为空”的假象。
 
 ## 状态
 
@@ -258,7 +256,7 @@ python3 scripts/generate_bookmarks.py \
   --output-dir output-article
 ```
 
-也可以在输入表加 `目标类型` 列，值填 `article`，按行控制。`--target article` 是全局默认，行内 `auto` 会继承全局值，行内显式 `article` / `homepage` 优先生效。
+也可以在输入表加 `目标类型` 列，值填 `article`，按行控制。
 
 ## 主页验证
 

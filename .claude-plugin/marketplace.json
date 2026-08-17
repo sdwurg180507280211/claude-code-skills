@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Personal collection of reusable Agent and Claude Code skills",
-    "version": "1.1.0"
+    "version": "1.2.0"
   },
   "plugins": [
     {
@@ -34,7 +34,8 @@
       "source": "./",
       "strict": false,
       "skills": [
-        "./skills/wechat-account-bookmarks"
+        "./skills/wechat-account-bookmarks",
+        "./skills/wechat-android-shortcuts"
       ]
     }
   ]
