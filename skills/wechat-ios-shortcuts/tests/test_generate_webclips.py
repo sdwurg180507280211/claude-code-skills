@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import importlib.util
 import plistlib
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -11,6 +12,7 @@ SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "generate_webclips.py
 spec = importlib.util.spec_from_file_location("generate_webclips", SCRIPT)
 mod = importlib.util.module_from_spec(spec)
 assert spec and spec.loader
+sys.modules["generate_webclips"] = mod
 spec.loader.exec_module(mod)
 
 
