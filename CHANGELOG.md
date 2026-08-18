@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-18 — v1.8.0
+
+### Added
+- 审计并记录外部 `xiaohuailabs/xiaohu-wechat-format`（固定审计 commit `dbddf0fd9c1189a6f3e0bec1bebb1b0e47e8ddf0`），作为专家访谈 / Q&A / 对话气泡 / 卡片 / timeline / hero 等复杂公众号布局的可选 formatter。
+- `wechat-medical-writer` 增加排版路由：常规文章继续使用 `canghe-markdown-to-html`；组件化访谈文章可按需使用 `xiaohu-wechat-format`；最终发布统一优先交给 `canghe-post-to-wechat`。
+
+### Changed
+- 明确 `xiaohu-wechat-format` 只负责高级排版，不使用其封面生成和 `publish.py`，避免与苍何配图/发布链重复。
+- 明确当前 `:::dialogue` 原生实现没有头像 / Logo 字段，不能宣称开箱即用 1:1 复刻头像型专家访谈卡。
+- 由于该 upstream 虽在 README 声明 MIT，但 GitHub 元数据未识别许可证且仓库没有独立 `LICENSE` 文件，本仓库只记录和调用外部 upstream，不 vendor、不复制其脚本/主题。
+- Marketplace 版本更新为 `1.8.0`。
+
 ## 2026-08-18 — v1.7.0
 
 ### Added

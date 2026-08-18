@@ -1,6 +1,6 @@
 ---
 name: wechat-medical-writer
-description: 医学类微信公众号/服务号的轻量编排 Skill。它只提供医学领域上下文、必要医学事实约束和 upstream handoff，不自定义文章结构、标题方法、研究流程、模板、Claim Ledger 或发布实现。主题到高质量文章必须交给本仓库随 utility-skills 一起提供的 content-research-writer；配图、Markdown 转微信 HTML、上传草稿箱按需交给苍何 canghe-article-illustrator / canghe-markdown-to-html / canghe-post-to-wechat。当前领域方向为女性健康、妇科、宫颈疾病、HPV、HSIL、CIN2/CIN3、生育力保护、PDT/HAL-PDT 等。用户上传的医学 ZIP/PPT 只用于定义领域方向或作为当次参考资料，原件不提交仓库。
+description: 医学类微信公众号/服务号的轻量编排 Skill。它只提供医学领域上下文、必要医学事实约束和 upstream handoff，不自定义文章结构、标题方法、研究流程、模板、Claim Ledger 或发布实现。主题到高质量文章必须交给本仓库随 utility-skills 一起提供的 content-research-writer；配图与发布按需交给苍何；普通文章可用 canghe-markdown-to-html，访谈/Q&A/卡片等复杂公众号布局可按需使用外部 xiaohu-wechat-format。当前领域方向为女性健康、妇科、宫颈疾病、HPV、HSIL、CIN2/CIN3、生育力保护、PDT/HAL-PDT 等。用户上传的医学 ZIP/PPT 只用于定义领域方向或作为当次参考资料，原件不提交仓库。
 ---
 
 # Medical WeChat Writer
@@ -14,9 +14,9 @@ description: 医学类微信公众号/服务号的轻量编排 Skill。它只提
 1. 告诉上游 Writer 当前服务号长期关注哪些医学领域；
 2. 把用户本次提供的医学资料、参考文章和约束传给上游 Writer；
 3. 增加少量医学事实边界，避免把营销材料、样稿或模型常识当成医学证据；
-4. 在需要配图、排版或上传时，把成稿继续交给已经存在的苍何 Skill。
+4. 在需要配图、复杂排版或上传时，把成稿继续交给成熟 upstream。
 
-它**不负责重新发明**：选题方法、Hook、标题方法、大纲方法、文章节奏、固定文章模板、研究工作流、公众号排版、配图实现或微信发布代码。
+它**不负责重新发明**：选题方法、Hook、标题方法、大纲方法、文章节奏、固定文章模板、研究工作流、公众号排版引擎、配图实现或微信发布代码。
 
 ## 当前医学方向
 
@@ -64,14 +64,14 @@ content-research-writer
 向主 Writer 传递当前已经知道的上下文，至少包括可获得的：
 
 ```text
-topic              当前主题 / 核心问题
-audience           医生 / HCP / 患者 / 公众 / 其他
-goal               教育 / 解读 / 综述 / 证据分析等
-format_length      用户指定的形式与篇幅（如有）
-user_sources       当前附件、私有资料或指定来源
-reference_sample   用户给的优秀公众号样稿（如有）
-style_constraints  用户指定的语气、完成度、引用方式（如有）
-medical_context    references/domains/cervical-health.md
+topic               当前主题 / 核心问题
+audience            医生 / HCP / 患者 / 公众 / 其他
+goal                教育 / 解读 / 综述 / 证据分析等
+format_length       用户指定的形式与篇幅（如有）
+user_sources        当前附件、私有资料或指定来源
+reference_sample    用户给的优秀公众号样稿（如有）
+style_constraints   用户指定的语气、完成度、引用方式（如有）
+medical_context     references/domains/cervical-health.md
 medical_constraints references/medical-constraints.md
 ```
 
@@ -128,19 +128,60 @@ medical_constraints references/medical-constraints.md
 
 这些步骤是**按需下游**，不要阻塞纯写作任务。
 
-### Preflight
+### 1. 配图
 
-如果用户只要求研究或写文章，不要求安装苍何。
-
-只有当用户要求“配图 / 排版 / 转微信 HTML / 上传草稿箱 / 发布”时，才检查以下 Skill 是否可用：
+用户要求正文插图时优先使用：
 
 ```text
 canghe-article-illustrator
-canghe-markdown-to-html
+```
+
+医学配图继续遵守 `references/medical-constraints.md`：数据图只使用已核验数据并保留来源；机制图不得把推测画成已证实因果；产品/器械优先使用用户提供的官方素材，不让生成模型虚构官方产品资产。
+
+### 2. 排版路由
+
+不要把所有文章强制交给同一个 formatter。根据用户要求和参考样稿选择：
+
+```text
+普通学术长文 / 常规公众号正文
+→ canghe-markdown-to-html
+
+专家访谈 / Q&A / 对话气泡 / 导语卡 / 卡片 / timeline / hero 等组件化布局
+→ xiaohu-wechat-format（外部可选 upstream）
+```
+
+`xiaohu-wechat-format` 已审计能力包括 Markdown → 微信兼容 inline HTML、`:::dialogue`、`:::intro`、gallery/stat/timeline/steps/compare 等容器，以及 interview 等主题。它只作为**高级布局 formatter** 使用；不要同时启用它自己的封面生成或 `publish.py`，避免和现有苍何配图/发布链重复。
+
+当前审计版本的 `:::dialogue` 原生实现是“说话人文本 + 左右交替气泡”，**没有头像字段**。因此，对参考图中“圆形专家头像/品牌 Logo 嵌入气泡”的效果只能视为近似布局能力，不能宣称开箱即用 1:1 复刻。若用户明确要求头像型访谈卡，需要单独评估 upstream 后续能力或在许可证边界明确后再做扩展。
+
+此外，该仓库 README 声明 MIT，但当前 GitHub 仓库元数据未识别许可证且根目录没有独立 `LICENSE` 文件。因此本仓库**只记录和调用外部 upstream，不 vendor、不复制其实现**，直到许可证文本明确。
+
+外部安装方式以其仓库 README 为准，当前为：
+
+```bash
+cd ~/.claude/skills/
+git clone https://github.com/xiaohuailabs/xiaohu-wechat-format.git
+cp xiaohu-wechat-format/config.example.json xiaohu-wechat-format/config.json
+pip3 install markdown requests
+```
+
+纯排版不需要填写其微信公众号 AppID/AppSecret。
+
+### 3. 发布
+
+发布统一保留一条链：
+
+```text
 canghe-post-to-wechat
 ```
 
-若缺少苍何 upstream，明确给出安装方式，不自行实现替代版本：
+无论 HTML 来自 `canghe-markdown-to-html` 还是 `xiaohu-wechat-format`，最终都优先交给苍何发布，不同时维护两套草稿箱上传逻辑。
+
+### Downstream preflight
+
+如果用户只要求研究或写文章，不要求任何排版/发布 upstream。
+
+需要苍何时，缺少则给出标准安装方式：
 
 ```text
 /plugin marketplace add freestylefly/canghe-skills
@@ -148,17 +189,9 @@ canghe-post-to-wechat
 /plugin install utility-skills@canghe-skills
 ```
 
-安装完成后按需求调用：
+需要高级访谈/组件化布局且 `xiaohu-wechat-format` 未安装时，给出上面的外部安装方式；不要静默退化成自己编造一套复杂 HTML 组件。
 
-```text
-canghe-article-illustrator     # 可选：正文配图
-canghe-markdown-to-html        # 微信公众号 HTML 排版
-canghe-post-to-wechat          # 上传公众号草稿箱
-```
-
-医学配图必须继续遵守 `references/medical-constraints.md`：数据图只使用已核验数据并保留来源；机制图不得把推测画成已证实因果；产品/器械优先使用用户提供的官方素材，不让生成模型虚构官方产品资产。
-
-这些能力由苍何 upstream 负责，本仓库不复制实现。详细 upstream 说明见 `references/upstreams.md`。
+详细 upstream 审计与职责见 `references/upstreams.md`。
 
 ## 推荐编排
 
@@ -176,13 +209,13 @@ wechat-medical-writer
 （可选）Viral Writer
 只做表达/标题/节奏润色，不改变医学事实
         ↓
-（用户需要时）苍何 preflight
-        ↓
 （可选）canghe-article-illustrator
         ↓
-canghe-markdown-to-html
+排版路由：
+├─ 常规文章 → canghe-markdown-to-html
+└─ 访谈/Q&A/组件化 → xiaohu-wechat-format
         ↓
-canghe-post-to-wechat
+统一：canghe-post-to-wechat
         ↓
 微信公众号草稿箱
 ```
@@ -205,4 +238,4 @@ references/upstreams.md
 README.md
 ```
 
-用户原始医学资料不进入仓库。唯一的 Writer 提示词副本是独立目录 `skills/content-research-writer/`，它是为解决安装可用性而保留的、带 MIT License、upstream provenance 和完整性锁的 vendored 副本，不在医学 Skill 内进行二次改写。
+用户原始医学资料不进入仓库。唯一的 Writer 提示词副本是独立目录 `skills/content-research-writer/`，它是为解决安装可用性而保留的、带 MIT License、upstream provenance 和完整性锁的 vendored 副本，不在医学 Skill 内进行二次改写。`xiaohu-wechat-format` 与苍何保持外部依赖，不复制进本仓库。
