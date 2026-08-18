@@ -33,8 +33,11 @@
 - 苍何不是纯写作的前置依赖。用户要求正文配图时优先 `canghe-article-illustrator`；普通学术文章/常规公众号排版优先 `canghe-markdown-to-html`；最终草稿箱发布统一优先 `canghe-post-to-wechat`。
 - 专家访谈、Q&A、对话气泡、导语卡、卡片、timeline、hero 等组件化公众号布局可按需调用外部 `xiaohuailabs/xiaohu-wechat-format`，只用其 formatter，不使用其封面生成或 `publish.py`，避免和苍何重复。
 - 当前已审计的 `xiaohu-wechat-format` `:::dialogue` 只支持“说话人文本 + 左右交替气泡”，没有头像/Logo 字段；不得把它描述为能开箱即用 1:1 复刻头像型专家访谈卡。其 README 声明 MIT，但 GitHub 元数据未识别许可证且仓库缺独立 `LICENSE` 文件，因此本仓库不得 vendor、复制脚本/主题或长期 fork，除非许可证文本明确。
+- 用户运行时提供公众号截图、HTML 或打包 ZIP 时，可以从真实 HTML 提炼**视觉画像**，但原始 HTML、图片、视频和 ZIP 不提交。视觉画像只记录跨样本稳定的颜色/尺寸/组件，不成为医学事实来源，也不取代 `content-research-writer` 的写作流程。
+- “光愈在线式”布局画像维护在 `skills/wechat-medical-writer/references/layouts/guangyu-online.md`：它记录 `#F24D60` 品牌色、红色描边导语卡、章节标题、专家点评、左右访谈气泡、Summary、END 等排版规律。它不是固定文章模板；仅在用户明确要求相似视觉或样本确实匹配时读取。
+- 若高还原访谈需要 upstream 不支持的 50px 品牌头像环、Logo/专家头像、SVG 对话尾巴、HOT 关注条等，应只补小型品牌组件，不重写 Markdown → 微信 HTML 引擎，也不得为了视觉还原复制第三方或用户样本源码。
 - 医学配图的数据只能来自已经核验的正文来源；不得补造数字，不得把机制推测画成确定因果，真实产品/器械/包装优先使用用户提供的官方素材。
 - 四个本仓库微信 Skill 保持独立，通过 Markdown、CSV/XLSX、`target_url` 等文件/数据契约松耦合，不直接互相 import。
 - Android 脚本不得提交开发机绝对路径、固定设备 serial、固定用户输入法；设备和工具路径通过自动发现或环境变量提供，临时切换输入法后必须恢复运行前的默认输入法。
-- 医学 Skill 不得提交用户上传的原始 ZIP/PPT/PDF、内部培训材料、患者资料或未公开研究。仓库只保存领域 taxonomy、必要医学约束和 upstream 编排说明。
+- 医学 Skill 不得提交用户上传的原始 ZIP/PPT/PDF、内部培训材料、患者资料或未公开研究。仓库只保存领域 taxonomy、必要医学约束、布局画像和 upstream 编排说明。
 - 用户提供的优秀公众号文章可以作为结构/文风/信息密度参考，但其医学结论和参考文献不能因为出现在样稿中就自动视为已核验事实；也不得把样稿结构固化为永久模板。

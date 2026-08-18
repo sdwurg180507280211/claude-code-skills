@@ -19,7 +19,8 @@
         ↓
 排版路由：
 ├─ 常规文章 → canghe-markdown-to-html
-└─ 访谈/Q&A/组件化 → xiaohu-wechat-format
+├─ 访谈/Q&A/组件化 → xiaohu-wechat-format
+└─ “光愈在线式” → guangyu-online layout profile + xiaohu
         ↓
 统一：canghe-post-to-wechat
 ```
@@ -66,9 +67,17 @@ Handoff 时把当前已经知道的主题、受众、目标、篇幅/形式、�
 
 完整规则见 `references/medical-constraints.md`。
 
-## 参考文章
+## 参考文章与排版样本
 
 用户提供优秀公众号文章时，把它作为写作风格、结构、信息密度和完成度参考，不把其中医学数字和文献自动当成已核验事实，也不把样稿结构固化成永久模板。
+
+用户提供的 `光愈在线公众号.zip` 另有一个用途：作为**排版样本集**。对其中 11 篇已保存 HTML 做了结构归纳，只把跨文章重复出现的品牌色、导语卡、章节标题、专家点评、访谈气泡、Summary、END 与合规尾注等视觉规律记录为：
+
+```text
+references/layouts/guangyu-online.md
+```
+
+原始 HTML、图片、视频和 ZIP 不进入仓库。这个 layout profile 只决定“怎么排”，不决定“怎么写”，也不作为医学事实来源。
 
 ## Upstream
 
@@ -93,9 +102,25 @@ canghe-article-illustrator
 
 可按需使用外部 `xiaohu-wechat-format` 做排版。它已审计支持 `:::dialogue`、`:::intro`、gallery / stat / timeline / steps / compare 等容器和 `interview` 主题，适合公众号复杂组件布局。
 
-当前版本的 `dialogue` 只有“说话人文字 + 左右气泡”，没有头像 / Logo 字段，所以对“品牌 Logo + 专家圆形头像”的参考图只能做结构近似，不能宣称开箱即用 1:1 复刻。
+当前版本的 `dialogue` 只有“说话人文字 + 左右气泡”，没有头像 / Logo 字段，所以对“品牌 Logo + 专家圆形头像”的真实样本只能先做结构近似，不能宣称开箱即用 1:1 复刻。
 
-此外，它 README 写 MIT，但仓库当前没有独立 `LICENSE` 文件且 GitHub 元数据未识别许可证。因此本仓库只记录并调用它，不 vendor、不复制脚本/主题。
+### 光愈在线式布局
+
+当用户明确要求“按光愈在线风格排版”时，先读取 `references/layouts/guangyu-online.md`。当前归纳出的核心视觉包括：
+
+```text
+主品牌色          #F24D60
+导语卡            2px 品牌红描边 / 10px 圆角
+正文              15px / 1.8 行高左右
+访谈气泡          #F2F2F2 / 5px 圆角
+头像环            50x50 / 品牌红 / 内图约 40px
+Summary           浅粉底 + 品牌红文字
+END               红色横线 + 白底 END 标签
+```
+
+其中头像、Logo、SVG 对话尾巴、顶部 HOT 关注条等品牌细节尚不是 xiaohu 原生字段；高还原版本应只补这些小型品牌组件，不重写 Markdown → 微信 HTML 引擎。
+
+此外，xiaohu README 写 MIT，但仓库当前没有独立 `LICENSE` 文件且 GitHub 元数据未识别许可证。因此本仓库只记录并调用它，不 vendor、不复制脚本/主题。
 
 需要时按其 README 外部安装：
 
@@ -114,6 +139,6 @@ pip3 install markdown requests
 
 ## 仓库边界
 
-原始医学 ZIP/PPT/PDF、内部培训材料、未公开研究、患者资料和运行时文章都不进入本公共仓库。
+原始医学 ZIP/PPT/PDF、公众号 HTML/图片/视频、内部培训材料、未公开研究、患者资料和运行时文章都不进入本公共仓库。
 
-本 Skill 自身只保留领域定义、医学约束和 upstream 编排说明；`content-research-writer` 作为独立、带许可证、来源记录和完整性锁的 upstream 副本维护；苍何和 `xiaohu-wechat-format` 都保持外部依赖。
+本 Skill 自身只保留领域定义、医学约束、布局画像和 upstream 编排说明；`content-research-writer` 作为独立、带许可证、来源记录和完整性锁的 upstream 副本维护；苍何和 `xiaohu-wechat-format` 都保持外部依赖。
