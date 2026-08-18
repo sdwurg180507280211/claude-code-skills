@@ -25,15 +25,10 @@ output/
 output-*/
 state.json
 *.tmp
-article-workspace/
 
 # Private medical sources / local writing artifacts
 medical-content-library/
 skills/wechat-medical-writer/sources/
-skills/wechat-medical-writer/article-workspace/
-claim-ledger.local.json
-source-map.local.md
-review-notes.local.md
 
 # Packaged skill archives
 *.skill
