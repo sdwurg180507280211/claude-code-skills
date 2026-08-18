@@ -1,6 +1,27 @@
 # Changelog
 
-## 2026-08-18
+## 2026-08-18 — v1.5.0
+
+### Changed
+- `wechat-medical-writer` 从“自建医学写作系统”重构为轻量医学领域适配与 upstream 编排层：用户医学 ZIP/PPT 只定义内容方向或作为当次资料，不再决定固定文章结构、研究流程和输出契约。
+- 主题到高质量文章默认复用 `CommandCodeAI/agent-skills` 的 `content-research-writer`；不在本仓库复制其大纲、研究、引用、Hook、正文和润色流程。
+- `Viral Writer` 仅作为用户明确要求时的可选表达润色层，不允许改变医学事实、数字、指南、适应证、监管状态和引用。
+- 公众号配图、Markdown → 微信 HTML、上传草稿箱继续直接复用苍何 `canghe-article-illustrator`、`canghe-markdown-to-html`、`canghe-post-to-wechat`。
+- `references/domains/cervical-health.md` 收敛为纯领域 taxonomy，不再包含固定文章选题、文章结构或研究/核验工作流。
+- Marketplace 版本更新为 `1.5.0`。
+
+### Added
+- `references/medical-constraints.md`：只保留通用 Writer 不具备的医学事实边界，不规定文章结构。
+- `references/upstreams.md`：记录主 Writer、可选润色层、苍何生产链的职责和已审计 upstream 版本。
+
+### Removed
+- 删除 `source-only` / `source-first` / `research-update` 自定义资料模式。
+- 删除固定 `hcp-academic.md` / `patient-education.md` 模板。
+- 删除 Claim Ledger、`validate_claim_ledger.py` 及对应测试。
+- 删除本地 `medical-writing-style.md`、`evidence-policy.md`、`source-policy.md`，避免重复实现成熟 upstream 已负责的写作/研究能力。
+- GitHub Actions 删除已经不再存在的医学 Claim Ledger 编译/测试步骤。
+
+## 2026-08-18 — v1.4.0
 
 ### Added
 - `wechat-medical-writer`：面向医学类微信公众号/服务号的专业写作 Skill，支持 `source-only` / `source-first` / `research-update` 三种资料模式，要求关键医学结论进入 Claim Ledger。
