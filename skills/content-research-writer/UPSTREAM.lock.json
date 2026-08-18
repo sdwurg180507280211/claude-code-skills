@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "files": [
+    {
+      "path": "skills/content-research-writer/SKILL.md",
+      "source_repository": "CommandCodeAI/agent-skills",
+      "source_path": "skills/content-research-writer/SKILL.md",
+      "source_commit": "f490dd9016f2729311e90f317dcb6c98be1a1500",
+      "source_blob": "d9e6f12fe51f61225fde6844dba8c3edf530703f",
+      "vendored_blob": "910a914144e2def10038dd9472e72a4a9d6c9a9c"
+    }
+  ]
+}
