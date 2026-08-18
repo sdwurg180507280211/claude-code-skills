@@ -34,7 +34,3 @@ jobs:
         run: python3 -m compileall -q skills/wechat-ios-shortcuts/scripts
       - name: Run WeChat iOS shortcut tests
         run: python3 -m unittest discover -s skills/wechat-ios-shortcuts/tests -v
-      - name: Compile WeChat medical writer scripts
-        run: python3 -m compileall -q skills/wechat-medical-writer/scripts
-      - name: Run WeChat medical writer tests
-        run: python3 -m unittest discover -s skills/wechat-medical-writer/tests -v

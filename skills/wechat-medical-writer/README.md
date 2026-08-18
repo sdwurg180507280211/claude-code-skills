@@ -1,84 +1,54 @@
 # wechat-medical-writer
 
-面向医学类微信公众号/服务号的专业文章创作 Skill。
+医学类微信公众号 / 服务号的**轻量领域适配与编排 Skill**。
 
-## 当前定位
-
-第一版以妇科 / 宫颈疾病为领域包，覆盖 HPV、HSIL、CIN2/CIN3、生育力保护、风险分层、PDT/HAL-PDT 等主题。领域结构来自用户当前提供的医学课件包，但**原始 ZIP/PPT 不进入仓库**。
-
-## 输入
-
-可以是：
-
-- 一个文章主题
-- 用户上传的 ZIP / PPT / PDF / Word
-- 指南 / 共识 / 论文
-- 产品说明书 / 注册资料
-- 既有文章或内部培训资料
-
-## 输出
-
-推荐每篇文章生成一个本地工作目录：
+它不再自己维护一套文章模板、研究模式、Claim Ledger 或发布代码，而是把职责拆清楚：
 
 ```text
-article-workspace/
-├── article.md
-├── claim-ledger.json
-├── source-map.md
-└── review-notes.md
-```
-
-生成物属于运行时输出，不应提交到仓库。
-
-## 资料模式
-
-```text
-source-only     只使用用户资料
-source-first    用户资料优先（默认）
-research-update 用户明确要求时补充/核验最新外部来源
-```
-
-## 与其他 Skill 的关系
-
-```text
-wechat-medical-writer
+医学领域上下文 + 必要医学约束
         ↓
-article.md
+content-research-writer
+负责主题 → 研究 → 引用 → 高质量文章
         ↓
-canghe-article-illustrator（可选配图）
+可选：Viral Writer
+只做表达/标题/节奏润色，不改变医学事实
         ↓
-canghe-markdown-to-html（排版）
-        ↓
-canghe-post-to-wechat（公众号草稿箱）
+canghe-article-illustrator
+canghe-markdown-to-html
+canghe-post-to-wechat
 ```
 
-本 Skill 不复制苍何的公众号发布逻辑。
+## 当前领域方向
 
-## Claim Ledger 校验
+用户提供的医学 ZIP/PPT 只用于定义后续内容方向或作为某次写作资料，**不决定固定文章结构**。
 
-```bash
-python3 scripts/validate_claim_ledger.py /path/to/claim-ledger.json
-```
+当前方向包括：
 
-## 测试
+- 女性健康 / 妇科
+- HPV 感染与持续感染
+- 宫颈癌筛查与防治
+- LSIL / HSIL
+- CIN2 / CIN3
+- 阴道镜 / 病理 / 风险分层
+- 生育需求与宫颈功能保护
+- PDT / HAL-PDT
 
-```bash
-python3 -m unittest discover -s tests -v
-python3 -m compileall -q scripts
-```
+详细 taxonomy：`references/domains/cervical-health.md`。
 
-## 私有资料
+## 参考文章
 
-推荐把原始医学资料放在仓库外：
+用户提供优秀公众号文章时，把它作为写作风格、结构、信息密度和完成度参考，不把其中医学数字和文献自动当成已核验事实，也不把样稿结构固化成永久模板。
 
-```text
-~/medical-content-library/
-└── cervical-health/
-    ├── slides/
-    ├── papers/
-    ├── guidelines/
-    ├── labels/
-    └── notes/
-```
+## Upstream
 
-不要把真实课件、内部资料、患者资料、未公开研究或产品内部材料提交到本公共仓库。
+- 主 Writer：`content-research-writer`（CommandCodeAI/agent-skills）
+- 可选传播润色：`Viral Writer`（仅表达层）
+- 配图/排版/发布：苍何 `canghe-article-illustrator`、`canghe-markdown-to-html`、`canghe-post-to-wechat`
+
+具体来源和职责见 `references/upstreams.md`。
+
+## 仓库边界
+
+原始医学 ZIP/PPT/PDF、内部培训材料、未公开研究、患者资料和运行时文章都不进入本公共仓库。
+
+本 Skill 只保留领域定义、医学约束和 upstream 编排说明。

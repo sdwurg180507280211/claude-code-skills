@@ -13,7 +13,7 @@
 | [`wechat-account-bookmarks`](skills/wechat-account-bookmarks) | Utility | 微信公众号 → Edge / Chrome 主页或文章书签 |
 | [`wechat-android-shortcuts`](skills/wechat-android-shortcuts) | Utility | ADB 驱动微信官方“添加到桌面”，创建/检查 Android 公众号或小程序快捷方式 |
 | [`wechat-ios-shortcuts`](skills/wechat-ios-shortcuts) | Utility | 名称 + URL → Apple Web Clip `.mobileconfig` → iPhone/iPad 主屏幕图标 |
-| [`wechat-medical-writer`](skills/wechat-medical-writer) | Utility | 医学资料/主题 → 证据可追溯的公众号/服务号文章草稿；当前领域包为妇科/宫颈疾病 |
+| [`wechat-medical-writer`](skills/wechat-medical-writer) | Utility | 医学领域上下文/资料约束 → 复用成熟 Writer 完成文章 → 苍何配图/排版/发布 |
 
 ## 安装
 
@@ -95,7 +95,6 @@ python3 scripts/validate_skills.py
 - `wechat-account-bookmarks` 的核心离线测试是否通过
 - `wechat-android-shortcuts` 的 Python 脚本是否可编译、核心离线测试是否通过
 - `wechat-ios-shortcuts` 的 Web Clip 生成器是否可编译、核心离线测试是否通过
-- `wechat-medical-writer` 的 Claim Ledger 校验器是否可编译、核心离线测试是否通过
 
 ## 维护原则
 
@@ -103,8 +102,9 @@ python3 scripts/validate_skills.py
 - 大型通用上游 Skill 不复制进来，优先直接使用上游版本，避免长期分叉。
 - Skill 的触发描述应足够具体，避免“只要提到 GitHub 就触发”这类过宽规则。
 - 不提交 Cookie、Token、二维码登录态、真实用户输入、运行输出或缓存。
-- 医学写作 Skill 不提交用户上传的 ZIP/PPT/PDF、内部培训材料、患者资料或未公开研究资料。
-- 微信浏览器书签、Android 真机自动化、iOS Web Clip 与医学内容创作保持为独立 Skill，通过文件/数据契约松耦合。
+- 医学资料包只用于定义内容方向或作为运行时参考，不提交用户上传的 ZIP/PPT/PDF、内部培训材料、患者资料或未公开研究资料。
+- `wechat-medical-writer` 保持为薄编排层：主题到文章优先复用 `content-research-writer`，配图/排版/发布优先复用苍何 upstream，不在本仓库重复实现。
+- 微信浏览器书签、Android 真机自动化、iOS Web Clip 与医学内容编排保持为独立 Skill，通过文件/数据契约松耦合。
 
 ## License
 
