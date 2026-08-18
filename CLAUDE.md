@@ -16,6 +16,7 @@
 3. 可确定验证的解析/转换能力应提供离线测试。
 4. 新增或删除 Skill 时同步更新 `README.md`、`.claude-plugin/marketplace.json` 和 `CHANGELOG.md`。
 5. 提交前运行 `python3 scripts/validate_skills.py`，并运行对应 Skill 的测试。
+6. 默认不复制大型通用 upstream；若 upstream 实际安装不可达、许可证明确允许且是当前链路必需，可保留原样 vendored 副本，但必须附许可证、固定版本和来源说明，避免长期魔改分叉。
 
 ## WeChat Skills
 
@@ -23,7 +24,8 @@
 - `wechat-android-shortcuts` 只负责 Android 真机上的微信“添加到桌面”自动化；使用 ADB + OCR 操作官方 UI，不修改微信数据库、不伪造 ShortcutInfo，不与其他微信 Skill 互相 import。
 - `wechat-ios-shortcuts` 只负责名称 + 已知 HTTP/HTTPS URL 到 Apple Web Clip `.mobileconfig` 的转换；不发现公众号、不控制微信 App、不静默安装配置描述文件。个人 iPhone/iPad 安装必须由用户确认，MDM 下发不属于当前实现。
 - `wechat-medical-writer` 是薄医学领域适配/编排层，不自己定义通用文章结构、标题方法、研究模式、固定模板或发布实现。用户医学 ZIP/PPT 只用于定义内容方向或作为当次资料。
-- 医学主题到成稿优先复用 `content-research-writer`；运行环境未安装 upstream 时应明确提示，不得悄悄实现 fallback Writer。
+- 医学主题到成稿使用 `content-research-writer`。由于该 upstream 在用户可用的插件市场不可达，本仓库按 MIT License 将已审计版本原样 vendored 为独立 `skills/content-research-writer/` 并加入 `utility-skills` bundle；不得在该 vendored `SKILL.md` 中加入医学特有逻辑。
+- 如果运行环境只安装了 `wechat-medical-writer` 而缺少 `content-research-writer`，应提示安装同仓库主 Writer，不得悄悄实现 fallback Writer。
 - `Viral Writer` 仅可作为用户明确要求时的可选表达润色层，不得修改或新增医学事实、数字、指南、适应证、监管状态或引用。
 - 医学文章配图、Markdown → 微信 HTML、草稿箱上传优先复用苍何 `canghe-article-illustrator`、`canghe-markdown-to-html`、`canghe-post-to-wechat`，本仓库不复制这些实现。
 - 四个本仓库微信 Skill 保持独立，通过 Markdown、CSV/XLSX、`target_url` 等文件/数据契约松耦合，不直接互相 import。
