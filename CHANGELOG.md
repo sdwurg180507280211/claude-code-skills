@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-08-18 — v1.6.0
+
+### Added
+- 将 `CommandCodeAI/agent-skills` 的 `content-research-writer` 按 MIT License 原样 vendored 到 `skills/content-research-writer/`，解决上游不在用户可用插件市场中的安装缺口。
+- `skills/content-research-writer/UPSTREAM.md`：记录上游仓库、路径、已审计 commit/blob 与同步规则。
+- `skills/content-research-writer/LICENSE`：保留上游 MIT License 与版权声明。
+
+### Changed
+- `utility-skills` bundle 现在同时包含 `content-research-writer` 与 `wechat-medical-writer`；安装本仓库 utility bundle 后不再因主 Writer 缺失而触发自制 fallback。
+- `wechat-medical-writer` 明确优先调用同仓库 vendored `content-research-writer`，医学上下文与医学事实约束仍只维护在医学 Skill 中，不修改通用 Writer 原文。
+- Marketplace 版本更新为 `1.6.0`。
+- 仓库维护原则增加受控 vendoring 例外：仅在 upstream 安装不可达、许可证允许且当前链路必需时使用，并必须保留许可证、来源和固定版本。
+
 ## 2026-08-18 — v1.5.0
 
 ### Changed
@@ -43,7 +56,7 @@
 - `wechat-ios-shortcuts/tests/test_generate_webclips.py`：离线覆盖输入列识别、重复/无效 URL 过滤、多 Web Clip payload 和 PNG 图标嵌入。
 
 ### Changed
-- `wechat-account-bookmarks` 回归单一职责，只负责公众号身份 / 文章 URL / `biz` → Edge / Chrome 主页或文章书签。
+- `wechat-account-bookmarks` 回归单一职责，只负责公众号身份 / 文章 URL / `biz` → Edge / Chrome 书签。
 - `wechat-android-shortcuts/scripts/batch_add_wechat.py` 收敛为唯一批量入口，删除拆分时遗留的 `_batch_add_wechat_impl.py` 包装层。
 - Android 批量脚本不再包含开发机绝对路径、固定设备 serial 或固定搜狗输入法；单设备自动选择 serial，多设备要求 `ANDROID_SERIAL`。
 - Android 批量脚本运行前记录系统当前默认输入法，并在正常结束或异常后通过 `try/finally` 恢复原输入法。
