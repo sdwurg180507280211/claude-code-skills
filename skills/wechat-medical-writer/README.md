@@ -45,10 +45,12 @@ canghe-post-to-wechat
 - 可选传播润色：`Viral Writer`（仅表达层）
 - 配图/排版/发布：苍何 `canghe-article-illustrator`、`canghe-markdown-to-html`、`canghe-post-to-wechat`
 
-具体来源和职责见 `references/upstreams.md`。
+`content-research-writer` 目前已按上游 MIT License **原样放入本仓库**的 `skills/content-research-writer/`，并加入 `utility-skills` bundle，因此安装本仓库的 utility bundle 时会同时得到医学编排层和主 Writer。该 vendored Skill 不做医学魔改；医学约束仍只存在于 `wechat-medical-writer`。
+
+具体来源、固定版本和职责见 `references/upstreams.md`。
 
 ## 仓库边界
 
 原始医学 ZIP/PPT/PDF、内部培训材料、未公开研究、患者资料和运行时文章都不进入本公共仓库。
 
-本 Skill 只保留领域定义、医学约束和 upstream 编排说明。
+本 Skill 自身只保留领域定义、医学约束和 upstream 编排说明；`content-research-writer` 作为独立、带许可证与来源记录的 upstream 副本维护。
