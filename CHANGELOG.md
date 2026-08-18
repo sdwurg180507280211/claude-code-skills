@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-08-18
+
+### Added
+- `wechat-medical-writer`：面向医学类微信公众号/服务号的专业写作 Skill，支持 `source-only` / `source-first` / `research-update` 三种资料模式，要求关键医学结论进入 Claim Ledger。
+- `wechat-medical-writer/references/domains/cervical-health.md`：第一版妇科/宫颈疾病领域包，覆盖 HPV、HSIL、CIN2/CIN3、生育力保护、风险分层与 PDT/HAL-PDT 等主题结构；不包含用户上传课件原件。
+- `wechat-medical-writer/scripts/validate_claim_ledger.py`：离线校验医学 Claim Ledger 的字段、来源类型、核验状态和公开使用状态。
+- `wechat-medical-writer/tests/test_claim_ledger.py`：覆盖有效 Claim、重复 ID、模型推断直接发布、未核验直接发布与缺少来源引用等规则。
+
+### Changed
+- Marketplace 增加 `wechat-medical-writer`，版本更新为 `1.4.0`。
+- GitHub Actions 增加医学写作 Skill 的脚本编译和离线测试。
+- 仓库文档明确：用户原始医学 ZIP/PPT/PDF、内部培训材料、患者资料和未公开研究默认不提交公共仓库。
+
 ## 2026-08-17
 
 ### Added
