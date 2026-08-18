@@ -1,75 +1,61 @@
 # wechat-medical-writer
 
-面向医学类微信公众号/服务号的专业文章创作 Skill。
+医学类微信公众号/服务号的**领域上下文与参考资料适配层**。
 
-## 当前定位
+## 它是什么
 
-第一版以妇科 / 宫颈疾病为领域包，覆盖 HPV、HSIL、CIN2/CIN3、生育力保护、风险分层、PDT/HAL-PDT 等主题。领域结构来自用户当前提供的医学课件包，但**原始 ZIP/PPT 不进入仓库**。
+当前服务号方向以女性健康、妇科和宫颈疾病为主，覆盖 HPV、HSIL、CIN2/CIN3、生育需求/生育力保护、PDT/HAL-PDT 等主题。
 
-## 输入
+用户提供的医学 ZIP / PPT / PDF 等材料作为**参考资料**使用。它们可以为文章提供事实、术语、案例、研究线索和内容方向，但不负责决定文章编排，也不是唯一信息源。
 
-可以是：
+## 它不是什么
 
-- 一个文章主题
-- 用户上传的 ZIP / PPT / PDF / Word
-- 指南 / 共识 / 论文
-- 产品说明书 / 注册资料
-- 既有文章或内部培训资料
+本 Skill 不自己发明另一套：
 
-## 输出
+- 文章结构
+- 写作方法
+- 标题/Hook 方法论
+- 配图流程
+- Markdown 排版
+- 微信公众号上传/发布
 
-推荐每篇文章生成一个本地工作目录：
+这些能力直接复用现成 Skill，并遵循那些 Skill 自己的流程。
 
-```text
-article-workspace/
-├── article.md
-├── claim-ledger.json
-├── source-map.md
-└── review-notes.md
-```
+## 现成能力复用
 
-生成物属于运行时输出，不应提交到仓库。
-
-## 资料模式
+当前明确支持的上游/下游包括：
 
 ```text
-source-only     只使用用户资料
-source-first    用户资料优先（默认）
-research-update 用户明确要求时补充/核验最新外部来源
+主题 / 参考资料
+        ↓
+现成写作 Skill
+- wechat-article-writer
+- Viral Writer
+- content-research-writer
+        ↓
+文章成稿
+        ↓
+苍何现成 Skill（按用户需要）
+- canghe-article-illustrator
+- canghe-markdown-to-html
+- canghe-post-to-wechat
 ```
 
-## 与其他 Skill 的关系
+具体来源和职责见 `references/upstreams.md`。
 
-```text
-wechat-medical-writer
-        ↓
-article.md
-        ↓
-canghe-article-illustrator（可选配图）
-        ↓
-canghe-markdown-to-html（排版）
-        ↓
-canghe-post-to-wechat（公众号草稿箱）
-```
+如果用户已经指定使用哪一个写作 Skill，就直接使用它；如果多个写作 Skill 同时可用且用户没有指定，本 Skill 不擅自把它们拼成新的工作流。
 
-本 Skill 不复制苍何的公众号发布逻辑。
+## 当前参考资料包
 
-## Claim Ledger 校验
+当前压缩包及其中课件只作为医学参考资料。仓库中只保留高层领域索引：
 
-```bash
-python3 scripts/validate_claim_ledger.py /path/to/claim-ledger.json
-```
+`references/domains/cervical-health.md`
 
-## 测试
-
-```bash
-python3 -m unittest discover -s tests -v
-python3 -m compileall -q scripts
-```
+原始 ZIP/PPT 不上传 GitHub。
 
 ## 私有资料
 
-推荐把原始医学资料放在仓库外：
+长期使用时可把资料放在仓库外，例如：
 
 ```text
 ~/medical-content-library/
@@ -77,8 +63,7 @@ python3 -m compileall -q scripts
     ├── slides/
     ├── papers/
     ├── guidelines/
-    ├── labels/
     └── notes/
 ```
 
-不要把真实课件、内部资料、患者资料、未公开研究或产品内部材料提交到本公共仓库。
+如果资料已经作为当前会话附件上传，直接读取附件即可。
