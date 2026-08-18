@@ -22,17 +22,26 @@
 - 最终润色；
 - 保持用户指定的语气 / 风格。
 
-这是默认的“主题 → 高质量文章”上游。`wechat-medical-writer` 只向它补充医学领域上下文和 `medical-constraints.md`，不改写它的写作流程。
+这是默认且必需的“主题 → 高质量文章”上游。`wechat-medical-writer` 只向它补充医学领域上下文和 `medical-constraints.md`，不改写它的写作流程。
+
+### Handoff
+
+医学 Skill 在开始大纲、研究或正文前，把当前已知的主题、受众、目标、篇幅/形式、用户资料、参考样稿、风格要求、医学领域上下文和医学约束一次性传给 `content-research-writer`。
+
+已知信息不重复问。用户要求“一口气成稿”时，仍使用主 Writer 的原生步骤，只是把大纲 → 研究 → 草稿 → 引用检查 → 最终润色连续执行，不要求用户在每个协作节点停下来确认。
+
+如果运行时无法调用主 Writer，停止正文创作并报告依赖问题；不要让医学 Skill 自己承担一套隐形 fallback Writer。
 
 ### 本仓库的安装方式
 
-由于该 upstream 目前不在用户可用的插件市场中，本仓库按其 MIT License 将已审计版本**原样 vendor** 到：
+由于该 upstream 目前不在用户可用的插件市场中，本仓库按其 MIT License 将已审计版本 vendor 到：
 
 ```text
 skills/content-research-writer/
 ├── SKILL.md
 ├── LICENSE
-└── UPSTREAM.md
+├── UPSTREAM.md
+└── UPSTREAM.lock.json
 ```
 
 并将它和 `wechat-medical-writer` 一起加入 `utility-skills` bundle。
@@ -45,7 +54,7 @@ skills/content-research-writer/
 
 即可同时获得主 Writer 与医学适配层。
 
-这不是 fallback Writer，也不是本仓库重新实现的 Writer；`SKILL.md` 保持上游原文，`UPSTREAM.md` 记录固定版本与同步规则，`LICENSE` 保留上游 MIT 许可和版权声明。
+这不是 fallback Writer，也不是本仓库重新实现的 Writer；`SKILL.md` 不加入医学特有逻辑，`UPSTREAM.md` 记录固定版本与同步规则，`UPSTREAM.lock.json` 锁定本地 vendored 内容，`LICENSE` 保留上游 MIT 许可和版权声明。
 
 如果用户只手工复制了 `wechat-medical-writer`，则还需要同时安装同仓库的 `content-research-writer`。
 
@@ -88,6 +97,22 @@ canghe-post-to-wechat
 - 标题、摘要、封面等发布前处理；
 - 微信 API / Chrome 路径上传到公众号草稿箱。
 
+### Preflight
+
+纯研究/写作任务不依赖苍何，不要因为下游未安装而阻塞正文。
+
+只有用户要求配图、排版或上传时才检查苍何。缺少时给出其标准安装命令：
+
+```text
+/plugin marketplace add freestylefly/canghe-skills
+/plugin install content-skills@canghe-skills
+/plugin install utility-skills@canghe-skills
+```
+
+其中 `canghe-article-illustrator`、`canghe-post-to-wechat` 属于内容生产链，`canghe-markdown-to-html` 属于 utility 链。安装后调用 upstream，不在本仓库补写替代实现。
+
+配图时继续叠加 `medical-constraints.md` 中的数据图、机制图和产品素材约束。苍何负责“如何配图”，医学 Skill 只负责“哪些医学事实不能被图像生成过程改写或补造”。
+
 本仓库不复制苍何代码，也不维护另一套微信发布实现。
 
 当前仓库元数据未显示明确 License，因此保持“调用 upstream，不复制代码”的边界。
@@ -108,9 +133,13 @@ canghe-post-to-wechat
 wechat-medical-writer
 医学领域上下文 + 必要医学约束
         ↓
-content-research-writer
+【MANDATORY】content-research-writer
+        ↓
+医学引用完整性检查
         ↓
 可选 Viral Writer 表达润色
+        ↓
+用户要求下游时才做苍何 preflight
         ↓
 可选 canghe-article-illustrator
         ↓
@@ -119,4 +148,4 @@ canghe-markdown-to-html
 canghe-post-to-wechat
 ```
 
-原则不是“所有 upstream 都不能复制”，而是：优先直接依赖；只有在**实际安装不可达且许可证允许**时，才保留一个明确标注来源、固定版本、许可证完整、尽量不修改的 vendored 副本。当前只对 `content-research-writer` 使用这一例外。
+原则不是“所有 upstream 都不能复制”，而是：优先直接依赖；只有在**实际安装不可达且许可证允许**时，才保留一个明确标注来源、固定版本、许可证完整、尽量不修改且受完整性锁保护的 vendored 副本。当前只对 `content-research-writer` 使用这一例外。
