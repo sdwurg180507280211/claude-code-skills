@@ -1,6 +1,6 @@
 ---
 name: wechat-medical-writer
-description: 医学类微信公众号/服务号的轻量编排 Skill。它只提供医学领域上下文、必要医学事实约束和 upstream handoff，不自定义文章结构、标题方法、研究流程、模板、Claim Ledger 或发布实现。主题到高质量文章必须交给本仓库随 utility-skills 一起提供的 content-research-writer；配图与发布按需交给苍何；普通文章可用 canghe-markdown-to-html，访谈/Q&A/卡片等复杂公众号布局可按需使用外部 xiaohu-wechat-format。当前领域方向为女性健康、妇科、宫颈疾病、HPV、HSIL、CIN2/CIN3、生育力保护、PDT/HAL-PDT 等。用户上传的医学 ZIP/PPT 只用于定义领域方向或作为当次参考资料，原件不提交仓库。
+description: 医学类微信公众号/服务号的轻量编排 Skill。它只提供医学领域上下文、必要医学事实约束和 upstream handoff，不自定义文章结构、标题方法、研究流程、模板、Claim Ledger 或发布实现。主题到高质量文章必须交给本仓库随 utility-skills 一起提供的 content-research-writer；配图与发布按需交给苍何；普通文章可用 canghe-markdown-to-html，访谈/Q&A/卡片等复杂公众号布局可按需使用外部 xiaohu-wechat-format；用户明确要求“光愈在线式”头像访谈时，可在 xiaohu 输出后调用本 Skill 的轻量品牌适配器。当前领域方向为女性健康、妇科、宫颈疾病、HPV、HSIL、CIN2/CIN3、生育力保护、PDT/HAL-PDT 等。用户上传的医学 ZIP/PPT/公众号样本只用于领域方向、当次资料或视觉参考，原件不提交仓库。
 ---
 
 # Medical WeChat Writer
@@ -14,9 +14,10 @@ description: 医学类微信公众号/服务号的轻量编排 Skill。它只提
 1. 告诉上游 Writer 当前服务号长期关注哪些医学领域；
 2. 把用户本次提供的医学资料、参考文章和约束传给上游 Writer；
 3. 增加少量医学事实边界，避免把营销材料、样稿或模型常识当成医学证据；
-4. 在需要配图、复杂排版或上传时，把成稿继续交给成熟 upstream。
+4. 在需要配图、复杂排版或上传时，把成稿继续交给成熟 upstream；
+5. 对已经完成的高级排版 HTML，可按用户明确要求叠加极小的品牌视觉适配，不介入写作和医学事实。
 
-它**不负责重新发明**：选题方法、Hook、标题方法、大纲方法、文章节奏、固定文章模板、研究工作流、公众号排版引擎、配图实现或微信发布代码。
+它**不负责重新发明**：选题方法、Hook、标题方法、大纲方法、文章节奏、固定文章模板、研究工作流、公众号排版引擎、配图生成或微信发布代码。
 
 ## 当前医学方向
 
@@ -158,15 +159,52 @@ canghe-article-illustrator
 
 用户明确指定“光愈在线式”视觉
 → 先读取 references/layouts/guangyu-online.md
-→ 再按组件需求选择 xiaohu 高级 formatter
-→ 未被 upstream 原生支持的品牌组件必须明确标记能力缺口
+→ xiaohu-wechat-format 负责 Markdown → 微信兼容 HTML
+→ 若需要高还原头像访谈卡，再调用 scripts/enhance_guangyu_dialogue.py
 ```
 
 `xiaohu-wechat-format` 已审计能力包括 Markdown → 微信兼容 inline HTML、`:::dialogue`、`:::intro`、gallery/stat/timeline/steps/compare 等容器，以及 interview 等主题。它只作为**高级布局 formatter** 使用；不要同时启用它自己的封面生成或 `publish.py`，避免和现有苍何配图/发布链重复。
 
-当前审计版本的 `:::dialogue` 原生实现是“说话人文本 + 左右交替气泡”，**没有头像字段**。因此，对光愈在线真实样本中“50px 品牌红圆形头像环 + 品牌 Logo/专家头像 + SVG 对话尾巴 + 灰色问题/回答卡”的效果，只能先复现结构；不能宣称开箱即用 1:1 复刻。需要高还原头像型访谈卡时，按 `guangyu-online.md` 中的“品牌组件扩展”边界处理，不把这类缺口塞回主 Writer。
+当前审计版本的 `:::dialogue` 原生实现是“说话人文本 + 左右交替气泡”，没有头像字段。本 Skill 的 `scripts/enhance_guangyu_dialogue.py` **不是另一个 formatter**：它只读取 xiaohu 已生成、带 `data-container` 标记的 HTML，把 `:::intro` 的视觉改成样本中的红色完整描边导语卡，并给已存在的左右 dialogue 注入用户提供的 Logo / 专家头像和品牌红头像环、灰色气泡与轻量 CSS 对话尾巴。
 
-此外，该仓库 README 声明 MIT，但当前 GitHub 仓库元数据未识别许可证且根目录没有独立 `LICENSE` 文件。因此本仓库**只记录和调用外部 upstream，不 vendor、不复制其实现**，直到许可证文本明确。
+高还原头像访谈的最小流程：
+
+```text
+article.md
+→ xiaohu-wechat-format（建议 interview 主题 + :::intro / :::dialogue）
+→ formatted.html
+→ enhance_guangyu_dialogue.py + avatars.json
+→ formatted.guangyu.html
+→ canghe-post-to-wechat
+```
+
+`avatars.json` 是运行时输入，例如：
+
+```json
+{
+  "光愈在线": "assets/logo.png",
+  "梁静教授": "assets/liang.png"
+}
+```
+
+执行示例：
+
+```bash
+python3 scripts/enhance_guangyu_dialogue.py \
+  --input /path/to/formatted.html \
+  --avatars /path/to/avatars.json \
+  --output /path/to/formatted.guangyu.html
+```
+
+约束：
+
+- 头像/Logo 必须由用户提供或使用用户有权使用的真实素材；不让生成模型冒充真实专家头像或官方 Logo；
+- `avatars.json`、头像、Logo 和生成 HTML 都是运行时文件，不提交本仓库；
+- speaker 名称必须与 `:::dialogue` 中的说话人文本一致；缺少头像映射时脚本失败并列出缺失 speaker，**不静默降级**；
+- 脚本不解析 Markdown、不生成医学内容、不生成图片、不上传微信、不读取用户原始样本；
+- 当前只补 `intro + avatar-dialogue`。顶部 HOT 关注条、完整 Summary 线条组合、END 品牌装饰等仍是独立的小型品牌组件，不宣称已经 1:1 完整复刻。
+
+此外，xiaohu 仓库 README 声明 MIT，但当前 GitHub 仓库元数据未识别许可证且根目录没有独立 `LICENSE` 文件。因此本仓库**只记录和调用外部 upstream，不 vendor、不复制其实现**，直到许可证文本明确。我们的品牌适配器只依赖它输出的公开 `data-container` HTML 契约，不复制 xiaohu 源码或主题。
 
 外部安装方式以其仓库 README 为准，当前为：
 
@@ -187,7 +225,7 @@ pip3 install markdown requests
 canghe-post-to-wechat
 ```
 
-无论 HTML 来自 `canghe-markdown-to-html` 还是 `xiaohu-wechat-format`，最终都优先交给苍何发布，不同时维护两套草稿箱上传逻辑。
+无论 HTML 来自 `canghe-markdown-to-html`、`xiaohu-wechat-format`，还是在 xiaohu HTML 上经过本地品牌适配，最终都优先交给苍何发布，不同时维护两套草稿箱上传逻辑。
 
 ### Downstream preflight
 
@@ -226,7 +264,7 @@ wechat-medical-writer
 排版路由：
 ├─ 常规文章 → canghe-markdown-to-html
 ├─ 访谈/Q&A/组件化 → xiaohu-wechat-format
-└─ 光愈在线式 → guangyu-online layout profile + xiaohu
+└─ 光愈在线式头像访谈 → xiaohu → enhance_guangyu_dialogue.py
         ↓
 统一：canghe-post-to-wechat
         ↓
@@ -237,19 +275,21 @@ wechat-medical-writer
 
 本 Skill 不规定固定输出文件集合。
 
-默认以**上游 Writer 的原生输出**为准。通常是一篇可继续处理的 Markdown 文章；是否同时输出研究笔记、引用列表、标题方案、配图建议等，由上游 Skill 和用户当前要求决定。
+默认以**上游 Writer 的原生输出**为准。通常是一篇可继续处理的 Markdown 文章；是否同时输出研究笔记、引用列表、标题方案、配图建议等，由上游 Skill 和用户当前要求决定。排版和品牌适配产生的 HTML、头像映射 JSON 仍属于运行时产物，不进入公共仓库。
 
 ## 仓库边界
 
-`wechat-medical-writer` 自身只保存：
+`wechat-medical-writer` 自身保存：
 
 ```text
 SKILL.md
+README.md
 references/domains/cervical-health.md
 references/medical-constraints.md
 references/upstreams.md
 references/layouts/guangyu-online.md
-README.md
+scripts/enhance_guangyu_dialogue.py
+tests/test_guangyu_dialogue.py
 ```
 
-用户原始医学资料、公众号 HTML、图片、视频和 ZIP 不进入仓库。唯一的 Writer 提示词副本是独立目录 `skills/content-research-writer/`，它是为解决安装可用性而保留的、带 MIT License、upstream provenance 和完整性锁的 vendored 副本，不在医学 Skill 内进行二次改写。`xiaohu-wechat-format` 与苍何保持外部依赖，不复制进本仓库。
+用户原始医学资料、公众号 HTML、图片、视频、头像、Logo 和 ZIP 不进入仓库。唯一的 Writer 提示词副本是独立目录 `skills/content-research-writer/`，它是为解决安装可用性而保留的、带 MIT License、upstream provenance 和完整性锁的 vendored 副本，不在医学 Skill 内进行二次改写。`xiaohu-wechat-format` 与苍何保持外部依赖，不复制进本仓库。

@@ -1,5 +1,17 @@
 # Changelog
 
+## 2026-08-18 — v1.10.0
+
+### Added
+- `wechat-medical-writer/scripts/enhance_guangyu_dialogue.py`：接在 `xiaohu-wechat-format` 输出之后的小型品牌视觉适配器，只依赖公开 `data-container` HTML 契约与运行时 speaker→头像/Logo 映射；补入光愈在线式红色完整描边导语卡、左右头像、50px 品牌红头像环、灰色对话卡和 CSS 三角尾巴。
+- `wechat-medical-writer/tests/test_guangyu_dialogue.py`：使用合成 xiaohu-like HTML 离线验证左右头像注入、导语重绘、缺失 speaker 映射失败和自定义 accent，不包含用户私有素材。
+
+### Changed
+- “光愈在线式头像访谈”路由升级为 `content-research-writer → xiaohu formatter → enhance_guangyu_dialogue.py → canghe-post-to-wechat`；本地脚本不解析 Markdown、不写医学内容、不生成头像、不发布微信，也不复制 xiaohu 或用户样本源码。
+- `references/layouts/guangyu-online.md` 标记 `intro-card + avatar-dialogue` 已有最小实现；HOT 关注条、完整 Summary、END 品牌装饰等继续保持为独立可选微组件，不预防性实现整套私有模板。
+- GitHub Actions 增加医学品牌适配器的 compile + offline unittest。
+- Marketplace 版本更新为 `1.10.0`。
+
 ## 2026-08-18 — v1.9.0
 
 ### Added

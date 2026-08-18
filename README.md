@@ -14,7 +14,7 @@
 | [`wechat-android-shortcuts`](skills/wechat-android-shortcuts) | Utility | ADB 驱动微信官方“添加到桌面”，创建/检查 Android 公众号或小程序快捷方式 |
 | [`wechat-ios-shortcuts`](skills/wechat-ios-shortcuts) | Utility | 名称 + URL → Apple Web Clip `.mobileconfig` → iPhone/iPad 主屏幕图标 |
 | [`content-research-writer`](skills/content-research-writer) | Utility | 上游 vendored：研究 → 大纲 → 引用 → 高质量文章；用于补足插件市场不可达的主 Writer |
-| [`wechat-medical-writer`](skills/wechat-medical-writer) | Utility | 医学领域上下文/资料约束 → 强制 handoff 给 `content-research-writer` → 按需配图/排版/发布；支持运行时公众号样本的布局画像 |
+| [`wechat-medical-writer`](skills/wechat-medical-writer) | Utility | 医学领域上下文/资料约束 → 强制 handoff 给 `content-research-writer` → 按需配图/排版/发布；支持公众号样本布局画像与小型品牌适配器 |
 
 ## 安装
 
@@ -38,7 +38,7 @@ npx skills add sdwurg180507280211/my-skills
 /plugin install utility-skills@my-skills
 ```
 
-`utility-skills` 会同时安装 `content-research-writer` 与 `wechat-medical-writer`，因此医学写作链路不会再因为主 Writer 不在外部市场而缺失。
+`utility-skills` 会同时安装 `content-research-writer` 与 `wechat-medical-writer`。
 
 ### 手动安装单个 Skill
 
@@ -50,9 +50,7 @@ cp -R skills/<skill-name> ~/.claude/skills/
 
 ### 公众号下游（按需）
 
-纯研究/写作不要求安装排版或发布 upstream。
-
-常规文章需要配图、微信公众号 HTML 或上传草稿箱时安装苍何：
+纯研究/写作不要求安装排版或发布 upstream。常规文章需要配图、微信公众号 HTML 或上传草稿箱时安装苍何：
 
 ```text
 /plugin marketplace add freestylefly/canghe-skills
@@ -60,7 +58,7 @@ cp -R skills/<skill-name> ~/.claude/skills/
 /plugin install utility-skills@canghe-skills
 ```
 
-如果文章是专家访谈 / Q&A / 对话气泡 / 卡片 / timeline / hero 等复杂组件布局，可额外安装 `xiaohu-wechat-format` 作为高级 formatter：
+专家访谈 / Q&A / 对话气泡 / 卡片 / timeline / hero 等复杂布局，可额外安装 `xiaohu-wechat-format`：
 
 ```bash
 cd ~/.claude/skills/
@@ -69,29 +67,33 @@ cp xiaohu-wechat-format/config.example.json xiaohu-wechat-format/config.json
 pip3 install markdown requests
 ```
 
-当前只使用它的排版能力；封面、配图和最终草稿箱发布仍优先走苍何，避免维护两套发布链。该 upstream 当前 README 声明 MIT，但仓库没有独立 `LICENSE` 文件，因此本仓库不 vendor 它。
+本项目只使用它的 formatter；封面、配图和最终草稿箱发布仍优先走苍何。xiaohu README 声明 MIT，但仓库当前没有独立 `LICENSE` 文件，因此本仓库不 vendor 它。
 
 ### “光愈在线式”公众号布局
 
-用户运行时提供的公众号 HTML/ZIP 不进入仓库。对 11 篇“光愈在线”样本归纳出的跨文章视觉规律只保存为：
+用户运行时提供的公众号 HTML/ZIP 不进入仓库。对 11 篇“光愈在线”样本归纳出的跨文章视觉规律保存在：
 
 ```text
 skills/wechat-medical-writer/references/layouts/guangyu-online.md
 ```
 
-其中记录 `#F24D60` 品牌色、红色描边导语卡、学术章节标题、专家点评、左右访谈气泡、Summary、END 与合规尾注等组件画像。它只影响排版路由，不决定医学文章怎么写，也不作为医学证据来源。
+其中记录 `#F24D60` 品牌色、红色描边导语卡、学术章节标题、专家点评、左右访谈气泡、Summary、END 与合规尾注等组件画像。它只影响排版，不决定医学文章怎么写，也不作为医学证据来源。
+
+对头像型访谈，已增加一个不依赖第三方源码的小型 HTML 后处理器：
+
+```text
+skills/wechat-medical-writer/scripts/enhance_guangyu_dialogue.py
+```
+
+它接在 xiaohu 输出之后，读取 `data-container` 标记和运行时 speaker→头像/Logo JSON，补入 50px 品牌头像环、左右灰色气泡和红色描边导语卡。它不解析 Markdown、不写医学内容、不生成头像、不发布微信；头像/Logo 和生成 HTML 都是运行时文件。离线测试位于 `skills/wechat-medical-writer/tests/test_guangyu_dialogue.py`。
 
 ## 仓库结构
 
 ```text
 my-skills/
-├── .claude-plugin/
-│   └── marketplace.json
-├── .github/
-│   └── workflows/
-│       └── validate-skills.yml
-├── scripts/
-│   └── validate_skills.py
+├── .claude-plugin/marketplace.json
+├── .github/workflows/validate-skills.yml
+├── scripts/validate_skills.py
 ├── skills/
 │   ├── china-proxy/
 │   ├── content-research-writer/
@@ -109,44 +111,22 @@ my-skills/
 └── README.md
 ```
 
-每个 Skill 至少包含：
-
-```text
-skills/<skill-name>/
-└── SKILL.md
-```
-
-按需要再增加 `scripts/`、`references/`、`examples/`、`tests/`、`templates/`、`README.md`。生成物、缓存、登录态、个人输入数据和私有医学资料不进入仓库。
-
 ## 校验
 
 ```bash
 python3 scripts/validate_skills.py
 ```
 
-仓库的 GitHub Actions 会在 push / pull request 时自动检查：
-
-- 每个 Skill 是否存在 `SKILL.md`
-- YAML frontmatter 是否包含 `name` / `description`
-- `name` 是否与目录名一致
-- 是否误提交缓存、虚拟环境、运行输出等文件
-- Marketplace 是否只引用真实存在的 Skill
-- `UPSTREAM.lock.json` 锁定的 vendored 文件是否发生未声明漂移
-- `wechat-account-bookmarks` 的核心离线测试是否通过
-- `wechat-android-shortcuts` 的 Python 脚本是否可编译、核心离线测试是否通过
-- `wechat-ios-shortcuts` 的 Web Clip 生成器是否可编译、核心离线测试是否通过
+GitHub Actions 会检查：Skill/frontmatter/Marketplace 结构、vendored upstream 完整性，以及 WeChat bookmarks、Android shortcuts、iOS shortcuts 和 Guangyu HTML adapter 的编译与离线测试。
 
 ## 维护原则
 
-- 仓库只保留自己真正维护、会继续迭代的 Skill，或为解决明确安装缺口而保留的受控 vendored upstream。
-- 大型通用上游 Skill 默认不复制；只有在实际安装不可达、许可证明确允许、且确实是当前链路必需时，才允许 vendor。vendored Skill 必须保留许可证、来源、固定版本与同步说明，并使用完整性锁防止无意魔改。
-- `content-research-writer` 是当前唯一这一类例外：来源 `CommandCodeAI/agent-skills`，MIT License；医学特有逻辑不得写入其 `SKILL.md`。
-- Skill 的触发描述应足够具体，避免“只要提到 GitHub 就触发”这类过宽规则。
-- 不提交 Cookie、Token、二维码登录态、真实用户输入、运行输出或缓存。
-- 医学资料包只用于定义内容方向或作为运行时参考，不提交用户上传的 ZIP/PPT/PDF、内部培训材料、患者资料或未公开研究资料。
-- 公众号样本 HTML/截图/ZIP 可以在运行时用于提炼视觉画像，但原始素材不提交；布局画像不能成为医学事实来源，也不能把单篇样稿固化成所有文章的写作模板。
-- `wechat-medical-writer` 保持为薄编排层：通用写作阶段必须 handoff 给 `content-research-writer`；面向公开发布的关键医学事实默认要求可核验来源；常规排版使用苍何，访谈/Q&A 等复杂组件布局可按需调用外部 `xiaohu-wechat-format`；最终发布统一优先走 `canghe-post-to-wechat`。
-- 微信浏览器书签、Android 真机自动化、iOS Web Clip 与医学内容编排保持为独立 Skill，通过文件/数据契约松耦合。
+- 优先成熟 upstream 和最简单实现；大型通用 upstream 默认不复制。
+- `content-research-writer` 是受控 vendored 例外；医学逻辑不得写进它。
+- 不提交 Cookie、Token、登录态、用户原始 ZIP/PPT/PDF/公众号 HTML、图片、视频、头像、Logo、患者资料或未公开研究。
+- 公众号样本可在运行时用于提炼视觉画像，但画像不能成为医学事实来源，也不能把单篇样稿固化成所有文章的写作模板。
+- `wechat-medical-writer` 保持薄编排：写作交给 `content-research-writer`；常规排版用苍何；复杂组件用 xiaohu；只对明确缺失的品牌视觉增加小型、离线可测试的后处理器；最终发布优先 `canghe-post-to-wechat`。
+- 微信浏览器书签、Android 真机自动化、iOS Web Clip 与医学内容编排保持独立，通过文件/数据契约松耦合。
 
 ## License
 

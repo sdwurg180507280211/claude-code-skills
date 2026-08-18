@@ -31,7 +31,7 @@
 | 专家点评 | 2 |
 | Summary 标签 | 2 |
 
-这说明应把它理解成一套**品牌组件库**，而不是一个固定文章模板。
+因此应该把“光愈在线风格”理解成一套**品牌组件库**，而不是一个固定写作模板。
 
 ## 2. 品牌视觉 Token
 
@@ -100,10 +100,12 @@ border              2px solid #F24D60
 border-radius       10px
 padding             22px 23px
 margin              20px 0 10px
-body                 15px / 1.8 / 0.5px letter-spacing
+body                15px / 1.8 / 0.5px letter-spacing
 ```
 
 用途：文章背景、问题提出、访谈嘉宾/研究背景简介。
+
+**当前实现：** `scripts/enhance_guangyu_dialogue.py` 会在 xiaohu 已生成的 HTML 上，把 `data-container="intro"` 改成这一完整红色描边视觉。它不生成导语内容。
 
 ### 3.3 章节标题 `section-heading`
 
@@ -168,7 +170,9 @@ bubble margin        20px 15px 0 -30px
 text                 #000 / 15px / 1.8
 ```
 
-头像下方还有一个红色对话尾巴，样本通过 inline SVG 实现。
+原始样本头像下方使用 inline SVG 对话尾巴。
+
+**当前实现：** xiaohu 先生成 `data-container="dialogue-bubble" data-side="left"`；随后 `enhance_guangyu_dialogue.py` 根据 speaker→image 映射注入 60px 头像列、50px 品牌红头像环、灰色气泡和自行实现的 CSS 三角尾巴。脚本不复制样本 SVG。
 
 ### 3.6 右侧回答 `interview-answer`
 
@@ -192,7 +196,7 @@ bubble margin        20px -30px 0 15px
 text                 #000 / 15px / 1.8
 ```
 
-这部分正是当前 `xiaohu-wechat-format :::dialogue` 与目标样式的主要差距：xiaohu 有左右气泡，但当前审计版本没有头像/Logo字段。
+**当前实现：** 与左侧提问使用同一品牌适配器，只是头像在右、气泡在左。speaker 必须在运行时头像映射中存在；缺失时脚本失败并报告，不静默输出半成品。
 
 ### 3.7 Summary `summary-chip`
 
@@ -205,6 +209,8 @@ padding              3px 5px
 ```
 
 旁边配细线，再接总结段落。不要把 `Summary` 强制加入每篇文章；只有文章结构需要总结卡时使用。
+
+**当前状态：** 尚未做专属品牌适配器。可先由 xiaohu 普通 callout/标题近似；若用户要求高还原，再单独增加 `summary-chip`，不要扩张 `avatar-dialogue` 的职责。
 
 ### 3.8 专家资料 `expert-profile`
 
@@ -231,6 +237,8 @@ END color            #FF4545
 
 样本还常在横线旁放约 65px 品牌装饰图片。
 
+**当前状态：** 尚未做专属品牌适配器。不要为了一个 END 组件复制样本图片；需要时由用户提供真实品牌资产，再增加独立 `end-divider`。
+
 ### 3.10 合规尾注
 
 样本常见顺序：
@@ -251,8 +259,6 @@ END
 
 ### A. HCP 学术长文 / 共识解读
 
-常见组件：
-
 ```text
 brand-follow
 intro-card
@@ -267,8 +273,6 @@ compliance footer
 
 ### B. 文献 / 临床研究解读
 
-常见组件：
-
 ```text
 brand-follow
 intro-card
@@ -281,8 +285,6 @@ compliance footer
 ```
 
 ### C. 专家访谈 / Q&A
-
-常见组件：
 
 ```text
 brand-follow
@@ -303,33 +305,34 @@ compliance footer
 
 **重要：** 分类只决定排版组件选择，不决定 Writer 的论证结构。文章结构仍交给 `content-research-writer` 和用户当前需求。
 
-## 5. 与现有 upstream 的映射
+## 5. 与现有 upstream / 本地适配器的映射
 
-### 可以直接映射
+| 目标组件 | xiaohu-wechat-format | 本地 Guangyu adapter | 苍何 |
+|---|---|---|---|
+| 常规 Markdown 正文 | 支持 | 不处理 | 支持 |
+| 微信 inline HTML | 支持 | 只后处理已有 HTML | 支持 |
+| 左右对话气泡 | `:::dialogue` | 加头像/品牌视觉 | 非主要强项 |
+| 导语块 | `:::intro` | 改成红色完整描边卡 | 可通过主题正文实现 |
+| timeline / steps / compare | 原生容器 | 不处理 | 视主题能力 |
+| 常规学术长文 | 可用 `academic-paper` 等 | 不处理 | **默认优先** |
+| 专家访谈结构 | **interview + :::dialogue** | **高还原头像卡** | 发布仍用苍何 |
+| 正文配图 | 不作为本项目默认生成器 | 不生成图片 | **canghe-article-illustrator** |
+| 草稿箱发布 | 本项目不用 xiaohu publish | 不发布 | **canghe-post-to-wechat** |
 
-| 目标组件 | xiaohu-wechat-format | 苍何 |
-|---|---|---|
-| 常规 Markdown 正文 | 支持 | 支持 |
-| 微信 inline HTML | 支持 | 支持 |
-| 左右对话气泡 | `:::dialogue` | 非主要强项 |
-| 导语块 | `:::intro` | 可通过主题正文实现 |
-| timeline / steps / compare | 原生容器 | 视主题能力 |
-| 常规学术长文 | 可用 `academic-paper` 等 | **默认优先** |
-| 专家访谈结构 | **优先 xiaohu `interview` + `:::dialogue`** | 发布仍用苍何 |
-| 正文配图 | 不作为本项目默认生成器 | **canghe-article-illustrator** |
-| 草稿箱发布 | 本项目不用 xiaohu publish | **canghe-post-to-wechat** |
-
-### 当前不能 1:1 映射
-
-以下目标效果在已审计 `xiaohu-wechat-format` 中没有直接字段：
+当前已经补齐：
 
 ```text
-对话头像/品牌 Logo
-50px 品牌红头像环
-头像下 SVG 对话尾巴
-光愈在线专属顶部 HOT/关注条
-完整的 Summary 标签 + 线条组合
-样本专属 END 横线/品牌小图
+intro-card
+avatar-dialogue（左右头像/Logo + 品牌红头像环 + 灰色气泡 + CSS 尾巴）
+```
+
+仍未做专属高还原：
+
+```text
+brand-follow（HOT/关注条）
+summary-chip + 线条组合
+end-divider + 品牌装饰图
+expert-profile 专属皮肤
 ```
 
 因此当前状态应描述为：
@@ -337,47 +340,93 @@ compliance footer
 ```text
 内容结构：可复现
 微信兼容 HTML：可复现
-通用访谈视觉：可复现
-“光愈在线式”品牌细节：需要小型扩展
+访谈左右头像卡：已有本地小型适配器
+完整“光愈在线式”全篇品牌细节：尚未全部 1:1
 ```
 
-不要把结构近似说成视觉 1:1。
+## 6. 头像访谈适配器
 
-## 6. 当前推荐路由
+文件：
+
+```text
+scripts/enhance_guangyu_dialogue.py
+```
+
+职责很窄：
+
+```text
+xiaohu 已生成 HTML
++ speaker → avatar/logo JSON
+→ Guangyu-style intro + avatar dialogue HTML
+```
+
+输入映射示例：
+
+```json
+{
+  "光愈在线": "assets/logo.png",
+  "梁静教授": "assets/liang.png"
+}
+```
+
+调用：
+
+```bash
+python3 scripts/enhance_guangyu_dialogue.py \
+  --input /path/to/formatted.html \
+  --avatars /path/to/avatars.json \
+  --output /path/to/formatted.guangyu.html
+```
+
+行为约束：
+
+- 只读取 xiaohu 的 `data-container` 标记，不解析 Markdown；
+- 不依赖 xiaohu Python 源码，不复制其主题；
+- 不读取用户原始公众号样本；
+- 不下载/生成头像；
+- speaker 缺头像映射时失败并明确列出缺失项；
+- 头像路径可以是后续发布链可解析的本地路径或 URL；
+- `--accent` 可覆盖品牌色，默认 `#F24D60`；
+- 使用 Python 标准库，无新增 runtime dependency。
+
+测试：`tests/test_guangyu_dialogue.py` 使用合成的 xiaohu-like HTML，不包含用户私有素材。
+
+## 7. 当前推荐路由
 
 ```text
 普通医学长文
 → canghe-markdown-to-html
 
-用户明确要求“光愈在线式学术排版”
+光愈在线式学术长文（非访谈）
 → 读取本 layout profile
-→ 优先 xiaohu 高级 formatter / 合适主题
-→ 对不能原生表达的品牌组件明确能力缺口
+→ 选择 canghe / xiaohu 合适主题
+→ 不强制调用头像适配器
 
-专家访谈 / Q&A
-→ article.md 中使用 :::intro / :::dialogue 等结构标记
+专家访谈 / Q&A（普通）
+→ article.md 使用 :::intro / :::dialogue
 → xiaohu interview 主题
-→ 当前先生成无头像结构版
-→ 若要求 1:1 头像卡：进入“品牌组件扩展”任务，不静默降级
 
-发布
+光愈在线式头像访谈
+→ article.md 使用 :::intro / :::dialogue
+→ xiaohu interview 主题
+→ enhance_guangyu_dialogue.py + 用户真实头像/Logo映射
 → canghe-post-to-wechat
 ```
 
-## 7. 后续扩展边界
+## 8. 后续扩展边界
 
-如果要做到用户提供截图的高还原版本，最小新增能力只应补**品牌组件**，不重写 Markdown/微信 HTML 引擎：
+如果继续提高还原度，只补还缺的**品牌组件**，不重写 Markdown/微信 HTML 引擎：
 
 ```text
 brand-follow
-avatar-dialogue
 summary-chip
 end-divider
 ```
 
-优先顺序：
+原则：
 
-1. 先确认 upstream 是否新增头像/自定义容器能力；
-2. 若仍缺失，再做独立的小型后处理/组件层；
-3. 该组件层只接收已完成内容和真实头像/Logo素材，不负责医学写作、事实生产、配图生成或微信发布；
-4. 不复制用户提供的原始 HTML、图片或第三方编辑器代码到公共仓库。
+1. 先确认 upstream 是否新增等价能力；
+2. 缺失时再做独立、可测试的小型后处理组件；
+3. 每个组件只接收已完成内容和真实品牌素材，不负责医学写作、事实生产、配图生成或微信发布；
+4. 不复制用户提供的原始 HTML、图片、SVG 或第三方编辑器代码到公共仓库；
+5. 不因为样本 11/11 出现某组件，就强制所有未来文章必须出现它。
