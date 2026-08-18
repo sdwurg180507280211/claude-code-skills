@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-18 — v1.9.0
+
+### Added
+- `references/layouts/guangyu-online.md`：基于用户运行时提供的 11 篇“光愈在线”公众号已保存 HTML，归纳跨文章稳定出现的品牌 Token、导语卡、章节标题、专家点评、访谈左右气泡、Summary、END 与合规尾注等视觉组件；不提交原始 HTML、图片、视频或 ZIP。
+- `wechat-medical-writer` 增加“光愈在线式”排版路由：用户明确要求类似该样本的视觉时，先读取布局画像，再交给 `xiaohu-wechat-format` 等成熟 formatter；布局画像不参与医学事实判断，也不决定 Writer 的论证结构。
+
+### Changed
+- 将“参考公众号文章”进一步拆成写作参考与视觉参考两个维度：样稿可以影响完成度/视觉画像，但不能自动成为医学证据，也不能把单篇结构固化成永久文章模板。
+- 明确当前 xiaohu 可复现访谈结构但不能原生 1:1 复刻光愈在线的 50px 品牌头像环、Logo/专家头像、SVG 对话尾巴、HOT 关注条等细节；高还原版本只应补小型品牌组件，不重写 Markdown → 微信 HTML 引擎。
+- Marketplace 版本更新为 `1.9.0`。
+
 ## 2026-08-18 — v1.8.0
 
 ### Added
