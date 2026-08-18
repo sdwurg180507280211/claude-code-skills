@@ -14,7 +14,7 @@
 | [`wechat-android-shortcuts`](skills/wechat-android-shortcuts) | Utility | ADB 驱动微信官方“添加到桌面”，创建/检查 Android 公众号或小程序快捷方式 |
 | [`wechat-ios-shortcuts`](skills/wechat-ios-shortcuts) | Utility | 名称 + URL → Apple Web Clip `.mobileconfig` → iPhone/iPad 主屏幕图标 |
 | [`content-research-writer`](skills/content-research-writer) | Utility | 上游 vendored：研究 → 大纲 → 引用 → 高质量文章；用于补足插件市场不可达的主 Writer |
-| [`wechat-medical-writer`](skills/wechat-medical-writer) | Utility | 医学领域上下文/资料约束 → 强制 handoff 给 `content-research-writer` → 按需苍何配图/排版/发布 |
+| [`wechat-medical-writer`](skills/wechat-medical-writer) | Utility | 医学领域上下文/资料约束 → 强制 handoff 给 `content-research-writer` → 按需配图/排版/发布 |
 
 ## 安装
 
@@ -48,15 +48,28 @@ cp -R skills/<skill-name> ~/.claude/skills/
 
 如果手动安装 `wechat-medical-writer`，同时复制 `skills/content-research-writer/`。
 
-### 苍何下游（按需）
+### 公众号下游（按需）
 
-纯研究/写作不要求安装苍何。只有需要文章配图、微信公众号 HTML 或上传草稿箱时，再安装苍何：
+纯研究/写作不要求安装排版或发布 upstream。
+
+常规文章需要配图、微信公众号 HTML 或上传草稿箱时安装苍何：
 
 ```text
 /plugin marketplace add freestylefly/canghe-skills
 /plugin install content-skills@canghe-skills
 /plugin install utility-skills@canghe-skills
 ```
+
+如果文章是专家访谈 / Q&A / 对话气泡 / 卡片 / timeline / hero 等复杂组件布局，可额外安装 `xiaohu-wechat-format` 作为高级 formatter：
+
+```bash
+cd ~/.claude/skills/
+git clone https://github.com/xiaohuailabs/xiaohu-wechat-format.git
+cp xiaohu-wechat-format/config.example.json xiaohu-wechat-format/config.json
+pip3 install markdown requests
+```
+
+当前只使用它的排版能力；封面、配图和最终草稿箱发布仍优先走苍何，避免维护两套发布链。该 upstream 当前 README 声明 MIT，但仓库没有独立 `LICENSE` 文件，因此本仓库不 vendor 它。
 
 ## 仓库结构
 
@@ -121,7 +134,7 @@ python3 scripts/validate_skills.py
 - Skill 的触发描述应足够具体，避免“只要提到 GitHub 就触发”这类过宽规则。
 - 不提交 Cookie、Token、二维码登录态、真实用户输入、运行输出或缓存。
 - 医学资料包只用于定义内容方向或作为运行时参考，不提交用户上传的 ZIP/PPT/PDF、内部培训材料、患者资料或未公开研究资料。
-- `wechat-medical-writer` 保持为薄编排层：通用写作阶段必须 handoff 给 `content-research-writer`；面向公开发布的关键医学事实默认要求可核验来源；配图/排版/发布按需复用苍何 upstream。
+- `wechat-medical-writer` 保持为薄编排层：通用写作阶段必须 handoff 给 `content-research-writer`；面向公开发布的关键医学事实默认要求可核验来源；常规排版使用苍何，访谈/Q&A 等复杂组件布局可按需调用外部 `xiaohu-wechat-format`；最终发布统一优先走 `canghe-post-to-wechat`。
 - 微信浏览器书签、Android 真机自动化、iOS Web Clip 与医学内容编排保持为独立 Skill，通过文件/数据契约松耦合。
 
 ## License
