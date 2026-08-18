@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -20,6 +21,7 @@ FORBIDDEN_PARTS = {
     "build",
 }
 FORBIDDEN_SUFFIXES = {".pyc", ".pyo"}
+GIT_BLOB_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 def parse_frontmatter(path: Path) -> dict[str, str]:
@@ -36,6 +38,64 @@ def parse_frontmatter(path: Path) -> dict[str, str]:
         if match:
             data[match.group(1)] = match.group(2).strip().strip('"\'')
     return data
+
+
+def git_blob_sha1(path: Path) -> str:
+    data = path.read_bytes()
+    header = f"blob {len(data)}\0".encode("ascii")
+    return hashlib.sha1(header + data).hexdigest()
+
+
+def validate_upstream_locks(errors: list[str]) -> None:
+    for lock_path in sorted(SKILLS_DIR.glob("*/UPSTREAM.lock.json")):
+        rel_lock = lock_path.relative_to(ROOT)
+        try:
+            lock = json.loads(lock_path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            errors.append(f"{rel_lock}: invalid upstream lock: {exc}")
+            continue
+
+        files = lock.get("files")
+        if lock.get("schema_version") != 1 or not isinstance(files, list) or not files:
+            errors.append(f"{rel_lock}: expected schema_version=1 and non-empty files")
+            continue
+
+        for index, item in enumerate(files, start=1):
+            if not isinstance(item, dict):
+                errors.append(f"{rel_lock}: files[{index}] must be an object")
+                continue
+
+            item_path = item.get("path")
+            expected = item.get("vendored_blob")
+            source_commit = item.get("source_commit")
+            source_blob = item.get("source_blob")
+            if not isinstance(item_path, str) or not item_path:
+                errors.append(f"{rel_lock}: files[{index}] missing path")
+                continue
+            if not isinstance(expected, str) or not GIT_BLOB_RE.fullmatch(expected):
+                errors.append(f"{rel_lock}: files[{index}] invalid vendored_blob")
+                continue
+            if not isinstance(source_commit, str) or not GIT_BLOB_RE.fullmatch(source_commit):
+                errors.append(f"{rel_lock}: files[{index}] invalid source_commit")
+            if not isinstance(source_blob, str) or not GIT_BLOB_RE.fullmatch(source_blob):
+                errors.append(f"{rel_lock}: files[{index}] invalid source_blob")
+
+            target = (ROOT / item_path).resolve()
+            try:
+                target.relative_to(ROOT.resolve())
+            except ValueError:
+                errors.append(f"{rel_lock}: locked path escapes repo: {item_path}")
+                continue
+            if not target.is_file():
+                errors.append(f"{rel_lock}: locked file missing: {item_path}")
+                continue
+
+            actual = git_blob_sha1(target)
+            if actual != expected:
+                errors.append(
+                    f"{rel_lock}: vendored file drifted: {item_path} "
+                    f"expected {expected}, got {actual}"
+                )
 
 
 def main() -> int:
@@ -104,6 +164,8 @@ def main() -> int:
             errors.append(f"invalid marketplace.json: {exc}")
     else:
         errors.append("missing .claude-plugin/marketplace.json")
+
+    validate_upstream_locks(errors)
 
     if errors:
         print("Skill repository validation failed:\n", file=sys.stderr)
