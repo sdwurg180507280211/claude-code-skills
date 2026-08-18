@@ -1,6 +1,6 @@
 ---
 name: wechat-medical-writer
-description: 医学类微信公众号/服务号的轻量编排 Skill。它只提供医学领域上下文与必要的医学事实约束，不自定义文章结构、标题方法、研究流程、模板、Claim Ledger 或发布实现。主题到高质量文章优先交给成熟的 content-research-writer；配图、Markdown 转微信 HTML、上传草稿箱优先交给苍何 canghe-article-illustrator / canghe-markdown-to-html / canghe-post-to-wechat。当前领域方向为女性健康、妇科、宫颈疾病、HPV、HSIL、CIN2/CIN3、生育力保护、PDT/HAL-PDT 等。用户上传的医学 ZIP/PPT 只用于定义领域方向或作为当次参考资料，原件不提交仓库。
+description: 医学类微信公众号/服务号的轻量编排 Skill。它只提供医学领域上下文与必要的医学事实约束，不自定义文章结构、标题方法、研究流程、模板、Claim Ledger 或发布实现。主题到高质量文章交给本仓库随 utility-skills 一起提供的 content-research-writer 上游副本；配图、Markdown 转微信 HTML、上传草稿箱优先交给苍何 canghe-article-illustrator / canghe-markdown-to-html / canghe-post-to-wechat。当前领域方向为女性健康、妇科、宫颈疾病、HPV、HSIL、CIN2/CIN3、生育力保护、PDT/HAL-PDT 等。用户上传的医学 ZIP/PPT 只用于定义领域方向或作为当次参考资料，原件不提交仓库。
 ---
 
 # Medical WeChat Writer
@@ -53,7 +53,9 @@ content-research-writer
 
 它负责其原生的研究、资料整理、大纲、引用、Hook、正文创作、迭代和最终润色流程。本 Skill 不复制或重写这些能力。
 
-如果运行环境没有安装 `content-research-writer`，应明确提示缺少 upstream，并给出安装/来源信息；不要悄悄启用一套自制 fallback Writer。
+由于该 upstream 目前不在用户可用的插件市场中，本仓库已经按 MIT License 将其**原样 vendoring** 为独立 `skills/content-research-writer/`，并加入 `utility-skills` bundle。安装 `utility-skills@my-skills` 后，应直接使用这个本地 Skill，不再因为“市场里没有 upstream”而启用自制 fallback Writer。
+
+如果用户只手动安装了 `wechat-medical-writer` 而没有安装 `content-research-writer`，应明确提示补装同仓库的 `content-research-writer`，不要自己重写一套 Writer。
 
 ### 可选表达优化
 
@@ -138,7 +140,7 @@ canghe-post-to-wechat
 
 ## 仓库边界
 
-仓库只保存：
+`wechat-medical-writer` 自身只保存：
 
 ```text
 SKILL.md
@@ -148,4 +150,4 @@ references/upstreams.md
 README.md
 ```
 
-不保存用户的原始医学资料，不复制 upstream Skill，不维护重复的公众号发布代码。
+用户原始医学资料不进入仓库。唯一的 Writer 代码/提示词副本是独立目录 `skills/content-research-writer/`，它是为解决安装可用性而保留的、带 MIT License 与 upstream provenance 的原样 vendored 副本，不在医学 Skill 内进行二次改写。
