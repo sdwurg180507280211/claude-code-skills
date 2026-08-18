@@ -20,7 +20,7 @@
 排版路由：
 ├─ 常规文章 → canghe-markdown-to-html
 ├─ 访谈/Q&A/组件化 → xiaohu-wechat-format
-└─ “光愈在线式” → guangyu-online layout profile + xiaohu
+└─ “光愈在线式”头像访谈 → xiaohu + 本地轻量品牌适配器
         ↓
 统一：canghe-post-to-wechat
 ```
@@ -29,116 +29,105 @@
 
 用户提供的医学 ZIP/PPT 只用于定义后续内容方向或作为某次写作资料，**不决定固定文章结构**。
 
-当前方向包括：
-
-- 女性健康 / 妇科
-- HPV 感染与持续感染
-- 宫颈癌筛查与防治
-- LSIL / HSIL
-- CIN2 / CIN3
-- 阴道镜 / 病理 / 风险分层
-- 生育需求与宫颈功能保护
-- PDT / HAL-PDT
-
-详细 taxonomy：`references/domains/cervical-health.md`。
+当前方向包括：女性健康/妇科、HPV、宫颈癌筛查与防治、LSIL/HSIL、CIN2/CIN3、阴道镜/病理/风险分层、生育需求与宫颈功能保护、PDT/HAL-PDT。详细 taxonomy 见 `references/domains/cervical-health.md`。
 
 ## Writer handoff
 
-`wechat-medical-writer` 不把 `content-research-writer` 当成“有就用”的建议，而是把通用写作阶段强制交给它。
-
-Handoff 时把当前已经知道的主题、受众、目标、篇幅/形式、用户资料、参考样稿、风格要求和医学约束一起传给主 Writer；已经明确的信息不要重复问。
-
-用户要求“直接成稿 / 一口气完成”时，可以让主 Writer 在同一轮连续完成大纲、研究、草稿、引用检查和最终润色，不需要人为停在每个协作步骤。
+`wechat-medical-writer` 把通用写作阶段强制交给 `content-research-writer`。Handoff 时一次性传递已知的主题、受众、目标、篇幅/形式、用户资料、参考样稿、风格和医学约束；已经明确的信息不要重复问。
 
 如果运行环境确实缺少 `content-research-writer`，停止正文并提示补装；不要悄悄切换成自制 fallback Writer。
 
 ## 医学证据边界
 
-面向公开发布的医学文章，即使用户没有额外说“帮我核验”，具体医学数字、指南/共识推荐、疗效/安全性、适应证、监管状态和其他可能影响临床判断的关键结论也应能回到可追溯来源。
-
-成稿前检查：
-
-- 正文引用与 Reference 一一对应；
-- 具体数字可以定位到真实来源；
-- DOI / PMID / 作者 / 年份 / 期刊等不凭记忆补齐；
-- 来源只支持“相关/提示”时，不升级为“证实/导致”。
-
-用户明确要求“只根据我给的资料写、不做外部核验”时可以遵从，但最终稿必须说明该来源边界。
-
-完整规则见 `references/medical-constraints.md`。
+面向公开发布的医学文章，具体医学数字、指南/共识推荐、疗效/安全性、适应证、监管状态和其他可能影响临床判断的关键结论应能回到可追溯来源。正文引用与 Reference 在交付前闭环；DOI/PMID/作者/年份/期刊不凭记忆补齐。完整规则见 `references/medical-constraints.md`。
 
 ## 参考文章与排版样本
 
-用户提供优秀公众号文章时，把它作为写作风格、结构、信息密度和完成度参考，不把其中医学数字和文献自动当成已核验事实，也不把样稿结构固化成永久模板。
+用户提供优秀公众号文章时，可以参考其写作完成度和视觉表现，但不能把样稿医学数字自动当成已核验事实，也不能把单篇结构固化成永久写作模板。
 
-用户提供的 `光愈在线公众号.zip` 另有一个用途：作为**排版样本集**。对其中 11 篇已保存 HTML 做了结构归纳，只把跨文章重复出现的品牌色、导语卡、章节标题、专家点评、访谈气泡、Summary、END 与合规尾注等视觉规律记录为：
+用户运行时提供的 `光愈在线公众号.zip` 包含 11 篇已保存 HTML。仓库只保留跨文章的排版画像：
 
 ```text
 references/layouts/guangyu-online.md
 ```
 
-原始 HTML、图片、视频和 ZIP 不进入仓库。这个 layout profile 只决定“怎么排”，不决定“怎么写”，也不作为医学事实来源。
+原始 HTML、图片、视频和 ZIP 不进入仓库。layout profile 只回答“怎么排”，不回答“怎么写”，也不是医学事实来源。
 
 ## Upstream
 
-- 主 Writer：`content-research-writer`（CommandCodeAI/agent-skills）
-- 可选传播润色：`Viral Writer`（仅表达层）
-- 配图 / 常规排版 / 发布：苍何 `canghe-article-illustrator`、`canghe-markdown-to-html`、`canghe-post-to-wechat`
-- 高级访谈 / Q&A / 组件化排版：`xiaohuailabs/xiaohu-wechat-format`
-
-`content-research-writer` 已按上游 MIT License 放入本仓库的 `skills/content-research-writer/`，并加入 `utility-skills` bundle。该 vendored Skill 不做医学魔改；本地完整性由 `UPSTREAM.lock.json` 保护。
+- 主 Writer：`content-research-writer`
+- 可选表达润色：`Viral Writer`
+- 配图/常规排版/发布：苍何 `canghe-article-illustrator`、`canghe-markdown-to-html`、`canghe-post-to-wechat`
+- 高级访谈/Q&A/组件化排版：`xiaohuailabs/xiaohu-wechat-format`
 
 ### 常规文章
 
-继续使用苍何：
-
 ```text
-canghe-article-illustrator
+canghe-article-illustrator（按需）
 → canghe-markdown-to-html
 → canghe-post-to-wechat
 ```
 
-### 专家访谈 / Q&A / 对话卡片
+### 普通专家访谈 / Q&A
 
-可按需使用外部 `xiaohu-wechat-format` 做排版。它已审计支持 `:::dialogue`、`:::intro`、gallery / stat / timeline / steps / compare 等容器和 `interview` 主题，适合公众号复杂组件布局。
+用 `xiaohu-wechat-format` 的 `interview` 主题与 `:::intro` / `:::dialogue` 等容器生成微信兼容 HTML。xiaohu 只作为 formatter；不使用它自己的 `publish.py` 或封面生成。
 
-当前版本的 `dialogue` 只有“说话人文字 + 左右气泡”，没有头像 / Logo 字段，所以对“品牌 Logo + 专家圆形头像”的真实样本只能先做结构近似，不能宣称开箱即用 1:1 复刻。
+### 光愈在线式头像访谈
 
-### 光愈在线式布局
-
-当用户明确要求“按光愈在线风格排版”时，先读取 `references/layouts/guangyu-online.md`。当前归纳出的核心视觉包括：
+当前已增加一个**小型后处理适配器**：
 
 ```text
-主品牌色          #F24D60
-导语卡            2px 品牌红描边 / 10px 圆角
-正文              15px / 1.8 行高左右
-访谈气泡          #F2F2F2 / 5px 圆角
-头像环            50x50 / 品牌红 / 内图约 40px
-Summary           浅粉底 + 品牌红文字
-END               红色横线 + 白底 END 标签
+scripts/enhance_guangyu_dialogue.py
 ```
 
-其中头像、Logo、SVG 对话尾巴、顶部 HOT 关注条等品牌细节尚不是 xiaohu 原生字段；高还原版本应只补这些小型品牌组件，不重写 Markdown → 微信 HTML 引擎。
+它不重写 xiaohu，也不是另一个 Markdown 引擎。流程是：
 
-此外，xiaohu README 写 MIT，但仓库当前没有独立 `LICENSE` 文件且 GitHub 元数据未识别许可证。因此本仓库只记录并调用它，不 vendor、不复制脚本/主题。
+```text
+article.md
+→ xiaohu-wechat-format
+→ formatted.html
+→ enhance_guangyu_dialogue.py + avatars.json
+→ formatted.guangyu.html
+→ canghe-post-to-wechat
+```
 
-需要时按其 README 外部安装：
+适配器目前负责：
+
+- 把 xiaohu `:::intro` 改成样本中的 `#F24D60` 完整描边导语卡；
+- 给左右 dialogue 注入用户提供的品牌 Logo / 专家头像；
+- 生成 60px 头像列、50px 品牌红圆环、约 40px 内图；
+- 使用 `#F2F2F2` 灰色问题/回答卡；
+- 使用自行实现的 CSS 三角尾巴，不复制用户样本中的 SVG；
+- speaker 缺头像映射时明确失败，不静默降级。
+
+`avatars.json` 示例：
+
+```json
+{
+  "光愈在线": "assets/logo.png",
+  "梁静教授": "assets/liang.png"
+}
+```
+
+执行：
 
 ```bash
-cd ~/.claude/skills/
-git clone https://github.com/xiaohuailabs/xiaohu-wechat-format.git
-cp xiaohu-wechat-format/config.example.json xiaohu-wechat-format/config.json
-pip3 install markdown requests
+python3 scripts/enhance_guangyu_dialogue.py \
+  --input /path/to/formatted.html \
+  --avatars /path/to/avatars.json \
+  --output /path/to/formatted.guangyu.html
 ```
 
-只用其排版能力，不启用其 `publish.py` 和封面生成；最终仍统一交给 `canghe-post-to-wechat`。
+头像/Logo 必须是用户提供或有权使用的真实素材，运行时文件不提交仓库。适配器只使用 Python 标准库，并有离线测试 `tests/test_guangyu_dialogue.py`。
 
-医学配图继续受 `medical-constraints.md` 约束：数据图不补造数字，机制图不把推测画成确定因果，真实产品/器械优先使用官方素材。
+当前还**没有**宣称全篇 1:1：顶部 HOT/关注条、完整 Summary 线条、END 品牌装饰、专家资料专属皮肤仍可作为后续独立微组件，不应塞进同一个脚本无限扩张。
 
-具体来源、固定版本、限制和职责见 `references/upstreams.md`。
+### xiaohu License 边界
+
+xiaohu README 声明 MIT，但当前仓库没有独立 `LICENSE` 文件且 GitHub 元数据未识别许可证，所以本仓库只外部调用它，不 vendor、不复制脚本/主题。品牌适配器只依赖其输出 HTML 的 `data-container` 契约。
 
 ## 仓库边界
 
-原始医学 ZIP/PPT/PDF、公众号 HTML/图片/视频、内部培训材料、未公开研究、患者资料和运行时文章都不进入本公共仓库。
+原始医学 ZIP/PPT/PDF、公众号 HTML/图片/视频、头像、Logo、内部培训材料、未公开研究、患者资料和运行时文章都不进入公共仓库。
 
-本 Skill 自身只保留领域定义、医学约束、布局画像和 upstream 编排说明；`content-research-writer` 作为独立、带许可证、来源记录和完整性锁的 upstream 副本维护；苍何和 `xiaohu-wechat-format` 都保持外部依赖。
+本 Skill 保留领域定义、医学约束、布局画像、小型可测试品牌适配器和 upstream 编排；通用写作仍由 `content-research-writer` 负责，微信 formatter/publisher 仍优先复用现有 upstream。
