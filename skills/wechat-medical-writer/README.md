@@ -15,10 +15,13 @@
 可选：Viral Writer
 只做表达/标题/节奏润色，不改变医学事实
         ↓
-用户需要时才进入苍何下游
-canghe-article-illustrator
-canghe-markdown-to-html
-canghe-post-to-wechat
+可选：canghe-article-illustrator
+        ↓
+排版路由：
+├─ 常规文章 → canghe-markdown-to-html
+└─ 访谈/Q&A/组件化 → xiaohu-wechat-format
+        ↓
+统一：canghe-post-to-wechat
 ```
 
 ## 当前领域方向
@@ -40,7 +43,7 @@ canghe-post-to-wechat
 
 ## Writer handoff
 
-`wechat-medical-writer` 不再把 `content-research-writer` 当成“有就用”的建议，而是把通用写作阶段强制交给它。
+`wechat-medical-writer` 不把 `content-research-writer` 当成“有就用”的建议，而是把通用写作阶段强制交给它。
 
 Handoff 时把当前已经知道的主题、受众、目标、篇幅/形式、用户资料、参考样稿、风格要求和医学约束一起传给主 Writer；已经明确的信息不要重复问。
 
@@ -71,24 +74,46 @@ Handoff 时把当前已经知道的主题、受众、目标、篇幅/形式、�
 
 - 主 Writer：`content-research-writer`（CommandCodeAI/agent-skills）
 - 可选传播润色：`Viral Writer`（仅表达层）
-- 配图/排版/发布：苍何 `canghe-article-illustrator`、`canghe-markdown-to-html`、`canghe-post-to-wechat`
+- 配图 / 常规排版 / 发布：苍何 `canghe-article-illustrator`、`canghe-markdown-to-html`、`canghe-post-to-wechat`
+- 高级访谈 / Q&A / 组件化排版：`xiaohuailabs/xiaohu-wechat-format`
 
 `content-research-writer` 已按上游 MIT License 放入本仓库的 `skills/content-research-writer/`，并加入 `utility-skills` bundle。该 vendored Skill 不做医学魔改；本地完整性由 `UPSTREAM.lock.json` 保护。
 
-苍何不属于纯写作的安装前置条件。只有用户要求配图、排版或发布时才做 preflight；若未安装，使用：
+### 常规文章
+
+继续使用苍何：
 
 ```text
-/plugin marketplace add freestylefly/canghe-skills
-/plugin install content-skills@canghe-skills
-/plugin install utility-skills@canghe-skills
+canghe-article-illustrator
+→ canghe-markdown-to-html
+→ canghe-post-to-wechat
 ```
+
+### 专家访谈 / Q&A / 对话卡片
+
+可按需使用外部 `xiaohu-wechat-format` 做排版。它已审计支持 `:::dialogue`、`:::intro`、gallery / stat / timeline / steps / compare 等容器和 `interview` 主题，适合公众号复杂组件布局。
+
+当前版本的 `dialogue` 只有“说话人文字 + 左右气泡”，没有头像 / Logo 字段，所以对“品牌 Logo + 专家圆形头像”的参考图只能做结构近似，不能宣称开箱即用 1:1 复刻。
+
+此外，它 README 写 MIT，但仓库当前没有独立 `LICENSE` 文件且 GitHub 元数据未识别许可证。因此本仓库只记录并调用它，不 vendor、不复制脚本/主题。
+
+需要时按其 README 外部安装：
+
+```bash
+cd ~/.claude/skills/
+git clone https://github.com/xiaohuailabs/xiaohu-wechat-format.git
+cp xiaohu-wechat-format/config.example.json xiaohu-wechat-format/config.json
+pip3 install markdown requests
+```
+
+只用其排版能力，不启用其 `publish.py` 和封面生成；最终仍统一交给 `canghe-post-to-wechat`。
 
 医学配图继续受 `medical-constraints.md` 约束：数据图不补造数字，机制图不把推测画成确定因果，真实产品/器械优先使用官方素材。
 
-具体来源、固定版本和职责见 `references/upstreams.md`。
+具体来源、固定版本、限制和职责见 `references/upstreams.md`。
 
 ## 仓库边界
 
 原始医学 ZIP/PPT/PDF、内部培训材料、未公开研究、患者资料和运行时文章都不进入本公共仓库。
 
-本 Skill 自身只保留领域定义、医学约束和 upstream 编排说明；`content-research-writer` 作为独立、带许可证、来源记录和完整性锁的 upstream 副本维护。
+本 Skill 自身只保留领域定义、医学约束和 upstream 编排说明；`content-research-writer` 作为独立、带许可证、来源记录和完整性锁的 upstream 副本维护；苍何和 `xiaohu-wechat-format` 都保持外部依赖。
