@@ -1,6 +1,6 @@
 # Upstreams
 
-本 Skill 不重写成熟 Writer 或公众号发布实现，而是把它们作为 upstream 使用。
+本 Skill 不重写成熟 Writer、排版或公众号发布实现，而是把它们作为 upstream 使用。
 
 ## 1. 主 Writer：content-research-writer
 
@@ -76,7 +76,7 @@ skills/content-research-writer/
 
 当前仓库元数据未显示明确 License，因此本仓库不复制或 vendor 其内容；仅在用户明确需要且运行环境已经安装时调用。
 
-## 3. 微信公众号生产链：苍何
+## 3. 配图与发布：苍何
 
 来源：`freestylefly/canghe-skills`
 
@@ -93,7 +93,7 @@ canghe-post-to-wechat
 职责：
 
 - 文章正文配图（按需）；
-- Markdown → 微信公众号 HTML；
+- 常规 Markdown → 微信公众号 HTML；
 - 标题、摘要、封面等发布前处理；
 - 微信 API / Chrome 路径上传到公众号草稿箱。
 
@@ -109,15 +109,88 @@ canghe-post-to-wechat
 /plugin install utility-skills@canghe-skills
 ```
 
-其中 `canghe-article-illustrator`、`canghe-post-to-wechat` 属于内容生产链，`canghe-markdown-to-html` 属于 utility 链。安装后调用 upstream，不在本仓库补写替代实现。
-
 配图时继续叠加 `medical-constraints.md` 中的数据图、机制图和产品素材约束。苍何负责“如何配图”，医学 Skill 只负责“哪些医学事实不能被图像生成过程改写或补造”。
 
 本仓库不复制苍何代码，也不维护另一套微信发布实现。
 
 当前仓库元数据未显示明确 License，因此保持“调用 upstream，不复制代码”的边界。
 
-## 4. 不作为默认主链：wechat-article-writer
+## 4. 高级公众号布局：xiaohu-wechat-format
+
+来源：`xiaohuailabs/xiaohu-wechat-format`
+
+已审计版本：`dbddf0fd9c1189a6f3e0bec1bebb1b0e47e8ddf0`
+
+当前仓库约 687 stars / 93 forks；Python 实现。它的定位与当前需求高度吻合：Markdown → 微信兼容 inline HTML，并支持大量主题与结构化容器。
+
+### 值得复用的能力
+
+- `:::dialogue[标题]`：把 `说话人：内容` 解析成左右交替的对话气泡；
+- `:::intro`：文首导读块；
+- gallery / stat / timeline / steps / compare / quote / byline / video 等容器；
+- `interview` 等访谈主题；
+- 85 套主题、画廊预览；
+- 微信兼容的 inline style 输出；
+- CJK 空格、中文标点和外链脚注处理。
+
+这些能力适合“专家访谈、Q&A、圆桌、导语卡、总结卡、时间线”等普通 Markdown 很难表达的公众号布局。
+
+### 当前限制
+
+当前 `dialogue` 实现只支持：
+
+```text
+说话人文本 + 内容 + 左右交替气泡
+```
+
+代码中没有头像 / Logo 字段。因此对“左侧品牌 Logo + 右侧专家圆形头像”的参考样式只能做结构近似，不能宣称原生 1:1 复刻。
+
+另外，`dialogue`、`intro` 等容器的部分样式直接写在 `scripts/format.py`，并非全部由主题 JSON 控制；想精确复刻特定卡片边框、头像位置等，需要 upstream 后续支持或做扩展，不能只新增一个 theme JSON 就解决。
+
+仓库当前没有发现自动化测试目录；核心 `format.py` 体积较大，因此暂时把它定位为**可选高级 formatter**，而不是取代苍何成为全局唯一排版引擎。
+
+### License 边界
+
+README 明确写 `MIT`，但当前 GitHub 仓库元数据 `license=null`，根目录列表也没有独立 `LICENSE` 文件。
+
+因此在许可证文本明确前：
+
+- 可以把它作为外部 upstream 让用户自行安装和调用；
+- 本仓库不 vendor、不复制其 `SKILL.md`、脚本、主题或模板；
+- 不基于其代码做本地长期 fork。
+
+当前 README 安装方式：
+
+```bash
+cd ~/.claude/skills/
+git clone https://github.com/xiaohuailabs/xiaohu-wechat-format.git
+cp xiaohu-wechat-format/config.example.json xiaohu-wechat-format/config.json
+pip3 install markdown requests
+```
+
+纯排版不需要微信公众号 AppID/AppSecret。
+
+### 在本项目中的职责边界
+
+只使用它的**排版能力**：
+
+```text
+article.md
+→ xiaohu-wechat-format / scripts/format.py
+→ 微信兼容 HTML
+→ canghe-post-to-wechat
+```
+
+不使用它自己的：
+
+```text
+cover/generate.py
+scripts/publish.py
+```
+
+原因是封面/配图与发布已经有苍何链路，避免同时维护两套上传和草稿箱逻辑。
+
+## 5. 不作为默认主链：wechat-article-writer
 
 来源：`xstongxue/best-skills`。
 
@@ -125,7 +198,22 @@ canghe-post-to-wechat
 
 因此当前架构不把它作为必需依赖。若用户未来明确指定使用，可单独评估，而不是同时维护两套发布链。
 
-## 5. 编排原则
+## 6. 排版路由
+
+```text
+普通学术长文 / 常规公众号正文
+→ canghe-markdown-to-html
+
+专家访谈 / Q&A / 对话 / 卡片 / timeline / hero 等组件化布局
+→ xiaohu-wechat-format
+
+最终发布
+→ canghe-post-to-wechat
+```
+
+如果用户明确要求头像型访谈卡，而当前 xiaohu upstream 仍不支持头像，不要假装已经完成 1:1 复刻；明确说明能力缺口，再决定是否等待 upstream、请求上游增强或在许可证边界明确后另做扩展。
+
+## 7. 总体编排原则
 
 ```text
 用户主题 / 私有资料 / 参考样稿
@@ -139,11 +227,9 @@ wechat-medical-writer
         ↓
 可选 Viral Writer 表达润色
         ↓
-用户要求下游时才做苍何 preflight
-        ↓
 可选 canghe-article-illustrator
         ↓
-canghe-markdown-to-html
+排版路由：canghe 常规 / xiaohu 高级组件
         ↓
 canghe-post-to-wechat
 ```
