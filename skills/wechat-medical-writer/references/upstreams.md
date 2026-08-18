@@ -1,12 +1,12 @@
 # Upstreams
 
-本 Skill 不复制成熟 Writer 或公众号发布实现，而是把它们作为 upstream 使用。
+本 Skill 不重写成熟 Writer 或公众号发布实现，而是把它们作为 upstream 使用。
 
 ## 1. 主 Writer：content-research-writer
 
 来源：`CommandCodeAI/agent-skills`
 
-路径：`skills/content-research-writer/SKILL.md`
+上游路径：`skills/content-research-writer/SKILL.md`
 
 已审计版本：`f490dd9016f2729311e90f317dcb6c98be1a1500`
 
@@ -22,9 +22,32 @@
 - 最终润色；
 - 保持用户指定的语气 / 风格。
 
-这是默认的“主题 → 高质量文章”上游。`wechat-medical-writer` 只向它补充医学领域上下文和 `medical-constraints.md`，不复制它的写作流程。
+这是默认的“主题 → 高质量文章”上游。`wechat-medical-writer` 只向它补充医学领域上下文和 `medical-constraints.md`，不改写它的写作流程。
 
-如果未安装，应提示用户安装该 upstream；不要写一套本地 fallback Writer。
+### 本仓库的安装方式
+
+由于该 upstream 目前不在用户可用的插件市场中，本仓库按其 MIT License 将已审计版本**原样 vendor** 到：
+
+```text
+skills/content-research-writer/
+├── SKILL.md
+├── LICENSE
+└── UPSTREAM.md
+```
+
+并将它和 `wechat-medical-writer` 一起加入 `utility-skills` bundle。
+
+因此安装：
+
+```text
+/plugin install utility-skills@my-skills
+```
+
+即可同时获得主 Writer 与医学适配层。
+
+这不是 fallback Writer，也不是本仓库重新实现的 Writer；`SKILL.md` 保持上游原文，`UPSTREAM.md` 记录固定版本与同步规则，`LICENSE` 保留上游 MIT 许可和版权声明。
+
+如果用户只手工复制了 `wechat-medical-writer`，则还需要同时安装同仓库的 `content-research-writer`。
 
 ## 2. 可选传播润色：Viral Writer
 
@@ -96,4 +119,4 @@ canghe-markdown-to-html
 canghe-post-to-wechat
 ```
 
-任何一步已有成熟 upstream 时，不在本 Skill 内重复实现。
+原则不是“所有 upstream 都不能复制”，而是：优先直接依赖；只有在**实际安装不可达且许可证允许**时，才保留一个明确标注来源、固定版本、许可证完整、尽量不修改的 vendored 副本。当前只对 `content-research-writer` 使用这一例外。
