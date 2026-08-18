@@ -27,10 +27,12 @@
 - 医学主题到成稿必须 handoff 给 `content-research-writer`。由于该 upstream 在用户可用的插件市场不可达，本仓库按 MIT License 将已审计版本 vendored 为独立 `skills/content-research-writer/` 并加入 `utility-skills` bundle；不得在该 vendored `SKILL.md` 中加入医学特有逻辑。
 - `content-research-writer` 的本地副本必须由 `UPSTREAM.lock.json` 锁定；`scripts/validate_skills.py` 会检查 Git blob 指纹，未同步更新 lock 的本地改动应直接失败。
 - 如果运行环境只安装了 `wechat-medical-writer` 而缺少 `content-research-writer`，应提示安装同仓库主 Writer，不得悄悄实现 fallback Writer。
-- Handoff 时把已知的主题、受众、目标、篇幅/形式、用户资料、参考样稿、风格要求和医学约束一次性传给主 Writer；已经知道的信息不要重复问。用户明确要求“一口气成稿”时，可让主 Writer连续执行原生的大纲、研究、草稿、引用检查和最终润色步骤。
+- Handoff 时把已知的主题、受众、目标、篇幅/形式、用户资料、参考样稿、风格要求和医学约束一次性传给主 Writer；已经知道的信息不要重复问。用户明确要求“一口气成稿”时，可让主 Writer 连续执行原生的大纲、研究、草稿、引用检查和最终润色步骤。
 - 面向公开发布的医学文章，关键数字、指南/共识推荐、疗效/安全性、适应证、监管状态和可能影响临床判断的事实默认要求可追溯来源；正文引用与参考文献在交付前必须闭环。只有用户明确要求“仅按提供资料、不做外部核验”时才允许限制在用户来源，并在成稿中说明该边界。
 - `Viral Writer` 仅可作为用户明确要求时的可选表达润色层，不得修改或新增医学事实、数字、指南、适应证、监管状态或引用。
-- 苍何不是纯写作的前置依赖。只有用户要求配图、Markdown → 微信 HTML、草稿箱上传时才检查并调用 `canghe-article-illustrator`、`canghe-markdown-to-html`、`canghe-post-to-wechat`；缺少时给出苍何标准安装方式，不自行实现替代版本。
+- 苍何不是纯写作的前置依赖。用户要求正文配图时优先 `canghe-article-illustrator`；普通学术文章/常规公众号排版优先 `canghe-markdown-to-html`；最终草稿箱发布统一优先 `canghe-post-to-wechat`。
+- 专家访谈、Q&A、对话气泡、导语卡、卡片、timeline、hero 等组件化公众号布局可按需调用外部 `xiaohuailabs/xiaohu-wechat-format`，只用其 formatter，不使用其封面生成或 `publish.py`，避免和苍何重复。
+- 当前已审计的 `xiaohu-wechat-format` `:::dialogue` 只支持“说话人文本 + 左右交替气泡”，没有头像/Logo 字段；不得把它描述为能开箱即用 1:1 复刻头像型专家访谈卡。其 README 声明 MIT，但 GitHub 元数据未识别许可证且仓库缺独立 `LICENSE` 文件，因此本仓库不得 vendor、复制脚本/主题或长期 fork，除非许可证文本明确。
 - 医学配图的数据只能来自已经核验的正文来源；不得补造数字，不得把机制推测画成确定因果，真实产品/器械/包装优先使用用户提供的官方素材。
 - 四个本仓库微信 Skill 保持独立，通过 Markdown、CSV/XLSX、`target_url` 等文件/数据契约松耦合，不直接互相 import。
 - Android 脚本不得提交开发机绝对路径、固定设备 serial、固定用户输入法；设备和工具路径通过自动发现或环境变量提供，临时切换输入法后必须恢复运行前的默认输入法。
