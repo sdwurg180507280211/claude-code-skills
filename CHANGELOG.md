@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-08-18 — v1.7.0
+
+### Added
+- `wechat-medical-writer` 增加强制 Writer handoff contract：在开始大纲、研究或正文前，必须把通用写作阶段交给 `content-research-writer`；已知上下文一次性传递，不重复询问。
+- 医学公开稿增加默认证据门槛与引用完整性检查：关键数字、指南/共识、疗效/安全性、适应证、监管状态等必须能回到可追溯来源；正文引用与 Reference 在交付前闭环。
+- `references/medical-constraints.md` 增加医学配图边界：数据图不得补造数字，机制图不得把推测画成确定因果，真实产品/器械优先使用官方素材。
+- `content-research-writer/UPSTREAM.lock.json`：锁定 vendored Writer 的来源 commit/blob 与本地 Git blob；仓库校验发现未声明漂移时失败。
+
+### Changed
+- 苍何改为按需下游：纯研究/写作不依赖苍何；只有用户要求配图、微信 HTML 或草稿箱时才进行 preflight，并在缺失时给出标准安装命令，不实现 fallback。
+- `scripts/validate_skills.py` 增加 `UPSTREAM.lock.json` 离线完整性验证。
+- `content-research-writer/UPSTREAM.md` 明确记录 source blob 与本地 vendored blob；当前文本内容与固定上游一致，本地副本仅缺少上游文件末尾换行。
+- Marketplace 版本更新为 `1.7.0`。
+
 ## 2026-08-18 — v1.6.0
 
 ### Added
