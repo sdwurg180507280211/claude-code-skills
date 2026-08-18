@@ -113,16 +113,23 @@ medical_constraints references/medical-constraints.md
 
 不要把原始 ZIP/PPT/PDF、内部培训材料、未公开资料或患者资料提交到本 GitHub 仓库。
 
-### 参考公众号文章
+### 参考公众号文章 / HTML 样本
 
-如果用户提供一篇优秀文章作为样稿：
+如果用户提供优秀公众号文章、截图、HTML 或文章打包 ZIP 作为样稿：
 
-- 可以把它作为结构、语气、信息密度、标题层级、引用呈现方式和整体完成度的参考；
+- 写作层可以把它作为结构、语气、信息密度、标题层级、引用呈现方式和整体完成度的参考；
+- 排版层可以把真实 HTML 中反复出现的颜色、尺寸和组件作为**视觉画像**；
 - 不把样稿里的医学结论、数字或参考文献自动视为已核验来源；
-- 不把样稿的固定结构硬编码成以后所有文章的模板；
-- 上游 Writer 应根据当前主题和用户要求决定最终文章结构。
+- 不把某一篇样稿的固定结构硬编码成以后所有文章的写作模板；
+- 原始 HTML、图片、视频和打包 ZIP 不提交公共仓库。
 
-例如用户提供一篇“HCP 学术型服务号文章”，目标是达到类似的专业程度和完成度，而不是逐段套模板。
+当用户明确要求“光愈在线式 / 类似我提供的光愈在线公众号排版”时，排版前读取：
+
+```text
+references/layouts/guangyu-online.md
+```
+
+这个文件只记录跨样本稳定出现的品牌 Token、组件画像和 formatter 映射，不参与医学事实判断，也不决定上游 Writer 的论证结构。
 
 ## 配图 / 排版 / 草稿箱
 
@@ -148,11 +155,16 @@ canghe-article-illustrator
 
 专家访谈 / Q&A / 对话气泡 / 导语卡 / 卡片 / timeline / hero 等组件化布局
 → xiaohu-wechat-format（外部可选 upstream）
+
+用户明确指定“光愈在线式”视觉
+→ 先读取 references/layouts/guangyu-online.md
+→ 再按组件需求选择 xiaohu 高级 formatter
+→ 未被 upstream 原生支持的品牌组件必须明确标记能力缺口
 ```
 
 `xiaohu-wechat-format` 已审计能力包括 Markdown → 微信兼容 inline HTML、`:::dialogue`、`:::intro`、gallery/stat/timeline/steps/compare 等容器，以及 interview 等主题。它只作为**高级布局 formatter** 使用；不要同时启用它自己的封面生成或 `publish.py`，避免和现有苍何配图/发布链重复。
 
-当前审计版本的 `:::dialogue` 原生实现是“说话人文本 + 左右交替气泡”，**没有头像字段**。因此，对参考图中“圆形专家头像/品牌 Logo 嵌入气泡”的效果只能视为近似布局能力，不能宣称开箱即用 1:1 复刻。若用户明确要求头像型访谈卡，需要单独评估 upstream 后续能力或在许可证边界明确后再做扩展。
+当前审计版本的 `:::dialogue` 原生实现是“说话人文本 + 左右交替气泡”，**没有头像字段**。因此，对光愈在线真实样本中“50px 品牌红圆形头像环 + 品牌 Logo/专家头像 + SVG 对话尾巴 + 灰色问题/回答卡”的效果，只能先复现结构；不能宣称开箱即用 1:1 复刻。需要高还原头像型访谈卡时，按 `guangyu-online.md` 中的“品牌组件扩展”边界处理，不把这类缺口塞回主 Writer。
 
 此外，该仓库 README 声明 MIT，但当前 GitHub 仓库元数据未识别许可证且根目录没有独立 `LICENSE` 文件。因此本仓库**只记录和调用外部 upstream，不 vendor、不复制其实现**，直到许可证文本明确。
 
@@ -213,7 +225,8 @@ wechat-medical-writer
         ↓
 排版路由：
 ├─ 常规文章 → canghe-markdown-to-html
-└─ 访谈/Q&A/组件化 → xiaohu-wechat-format
+├─ 访谈/Q&A/组件化 → xiaohu-wechat-format
+└─ 光愈在线式 → guangyu-online layout profile + xiaohu
         ↓
 统一：canghe-post-to-wechat
         ↓
@@ -235,7 +248,8 @@ SKILL.md
 references/domains/cervical-health.md
 references/medical-constraints.md
 references/upstreams.md
+references/layouts/guangyu-online.md
 README.md
 ```
 
-用户原始医学资料不进入仓库。唯一的 Writer 提示词副本是独立目录 `skills/content-research-writer/`，它是为解决安装可用性而保留的、带 MIT License、upstream provenance 和完整性锁的 vendored 副本，不在医学 Skill 内进行二次改写。`xiaohu-wechat-format` 与苍何保持外部依赖，不复制进本仓库。
+用户原始医学资料、公众号 HTML、图片、视频和 ZIP 不进入仓库。唯一的 Writer 提示词副本是独立目录 `skills/content-research-writer/`，它是为解决安装可用性而保留的、带 MIT License、upstream provenance 和完整性锁的 vendored 副本，不在医学 Skill 内进行二次改写。`xiaohu-wechat-format` 与苍何保持外部依赖，不复制进本仓库。
