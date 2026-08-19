@@ -1,6 +1,6 @@
 ---
 name: wechat-medical-writer
-description: 医学类微信公众号/服务号的轻量编排 Skill。它只提供医学领域上下文、必要医学事实约束和 upstream handoff，不自定义文章结构、标题方法、研究流程、模板、Claim Ledger 或发布实现。主题到高质量文章必须交给本仓库随 utility-skills 一起提供的 content-research-writer；配图与发布按需交给苍何；普通文章可用 canghe-markdown-to-html，访谈/Q&A/卡片等复杂公众号布局可按需使用外部 xiaohu-wechat-format；用户明确要求“光愈在线式”头像访谈时，可在 xiaohu 输出后调用本 Skill 的轻量品牌适配器。当前领域方向为女性健康、妇科、宫颈疾病、HPV、HSIL、CIN2/CIN3、生育力保护、PDT/HAL-PDT 等。用户上传的医学 ZIP/PPT/公众号样本只用于领域方向、当次资料或视觉参考，原件不提交仓库。
+description: 医学类微信公众号/服务号的轻量编排 Skill。它只提供医学领域上下文、必要医学事实约束和 upstream handoff，不自定义文章结构、标题方法、研究流程、模板、Claim Ledger 或发布实现。主题到高质量文章必须交给本仓库随 utility-skills 一起提供的 content-research-writer；普通概念插图、常规排版与发布按需复用苍何，统计图/论文式 Figure/多面板图必须读取本 Skill 的 medical-figure-design 并优先使用可控 plotting/SVG/HTML/vector 锚定数据与文字；访谈/Q&A/卡片等复杂公众号布局可按需使用外部 xiaohu-wechat-format；用户明确要求“光愈在线式”头像访谈时，可在 xiaohu 输出后调用本 Skill 的轻量品牌适配器。当前领域方向为女性健康、妇科、宫颈疾病、HPV、HSIL、CIN2/CIN3、生育力保护、PDT/HAL-PDT 等。用户上传的医学 ZIP/PPT/公众号样本只用于领域方向、当次资料或视觉参考，原件不提交仓库。
 ---
 
 # Medical WeChat Writer
@@ -186,7 +186,11 @@ references/layouts/guangyu-online.md
 
 ### 1. 配图
 
-用户要求正文插图时优先使用：
+先区分两类任务，不再把所有“正文插图”都统一路由到 illustration generator。
+
+#### 普通概念插图
+
+没有精确坐标、真实统计数字、复杂表格或多 Panel 专业文字时，可优先使用：
 
 ```text
 canghe-article-illustrator
@@ -194,11 +198,23 @@ canghe-article-illustrator
 
 医学配图继续遵守 `references/medical-constraints.md`。
 
-涉及统计图、论文式 Figure、多面板图或用户提供论文图作为复杂度参考时，必须同时读取：
+#### 统计图 / 论文式 Figure / 多面板科学图
+
+只要图中包含精确数字、坐标、表格、图例、多 Panel 或大量专业文字，就视为 scientific figure。必须读取：
 
 ```text
 references/medical-figure-design.md
 ```
+
+这类任务优先：
+
+```text
+可控 plotting / SVG / HTML / vector
+→ 锁定数据与文字
+→ 必要时再用 image generation 做视觉润色
+```
+
+**不要因为“正文插图默认走 canghe-article-illustrator”而覆盖 scientific figure 的可控绘图路由。**
 
 最重要的 Figure Contract：
 
@@ -214,9 +230,15 @@ visual_references    只决定复杂度 / Panel 密度 / 视觉语法
 
 生成 Figure 前，从当前冻结稿或最终 HTML 反推 Panel 内容；不要因为参考 Figure 里有弦图、年龄分层、季节曲线，就在当前文章没有这些内容或数据时照搬。
 
+如果文章本身有多个互补信息结构，而参考图也是论文式高复杂度 Figure，不要无故把它压缩成低信息密度卡通图；复杂度应来自真实数据、矩阵、分组与 Panel，而不是装饰。
+
+两张及以上高信息密度 Figure 时，先按整篇文章做 placement map。避免连续堆图；必要时可连同只服务于该 Figure 的“最小支撑段落”一起移动，并通过前向提示与桥接句维持论证连续性。具体规则见 `references/medical-figure-design.md`。
+
+中英文版本视为同一 Figure 的本地化重绘；Caption 语言跟随目标场景和用户要求，不默认“英文 Figure caption + 中文图注”。文本密集科学图不要把生成模型当作唯一翻译/排版层。
+
 数据图只使用已核验数据并保留来源；机制图不得把推测画成已证实因果；产品/器械优先使用用户提供的官方素材，不让生成模型虚构官方产品资产。
 
-若图像生成模型自动写错作者、期刊、DOI/PMID 或来源，优先移除图内错误来源文字，由正式 HTML 图注与 References 管理引用。
+若图像生成模型自动写错作者、期刊、DOI/PMID、来源、数字、图例或术语，优先移除/重绘错误内容，由可控绘图层和正式 HTML References 管理事实与引用。
 
 ### 2. 排版路由
 
@@ -332,8 +354,12 @@ wechat-medical-writer
 （可选）Viral Writer
 只做表达/标题/节奏润色，不改变医学事实
         ↓
-（可选）canghe-article-illustrator
-若为论文式 Figure，读取 medical-figure-design.md
+按需配图路由：
+├─ 普通概念插图 → canghe-article-illustrator
+└─ 统计图 / 论文式 Figure / 多面板图
+   → medical-figure-design.md
+   → controllable plotting / SVG / HTML / vector
+   → 必要时视觉润色
         ↓
 排版路由：
 ├─ 常规文章 → canghe-markdown-to-html
