@@ -124,13 +124,61 @@ medical_constraints references/medical-constraints.md
 - 不把某一篇样稿的固定结构硬编码成以后所有文章的写作模板；
 - 原始 HTML、图片、视频和打包 ZIP 不提交公共仓库。
 
+#### 参考样稿解析优先级
+
+有真实 HTML 时，**真实 HTML 是排版事实源，截图只是视觉补充**：
+
+```text
+真实已发布 HTML      → 精确字号 / 行高 / 间距 / DOM / inline style
+截图                 → 色彩 / 视觉比例 / 屏幕密度 / 整体观感
+用户口头反馈         → 最终偏好与覆盖规则
+浏览器预览猜测       → 最低优先级
+```
+
+不要把父容器的继承字号误当成正文实际字号，也不要只看截图肉眼猜 CSS。
+
+如果用户明确点名压缩包里的某一篇文章“从头到尾参考”，优先匹配**该篇**的：
+
+```text
+标题密度
+正文连续性
+Figure 插入节奏
+Reference 呈现方式
+组件密度
+```
+
+不要把整个样本库里出现过的组件全部叠到一篇文章上。
+
+#### 内容结构 ≠ 视觉标题数量
+
+一篇文章逻辑上可以回答 8～10 个问题，但视觉上不一定需要 8～10 个标题组件。
+
+高还原排版优先：
+
+```text
+少量真正的大章节
++ 连续正文
++ Figure / 表格在论证位置穿插
++ 粗体承担局部强调
+```
+
+不要机械执行：
+
+```text
+每个问题 → 一个大标题卡
+每个重点 → 一个 Quote 卡
+每个列表 → 一个新卡片
+```
+
+**High fidelity 不是“把所有品牌组件都用上”，而是复用最接近参考文章的组件语法与密度。**
+
 当用户明确要求“光愈在线式 / 类似我提供的光愈在线公众号排版”时，排版前读取：
 
 ```text
 references/layouts/guangyu-online.md
 ```
 
-这个文件只记录跨样本稳定出现的品牌 Token、组件画像和 formatter 映射，不参与医学事实判断，也不决定上游 Writer 的论证结构。
+这个文件只记录视觉 Token、组件画像、真实 HTML 参数、组件密度和 formatter 映射，不参与医学事实判断，也不决定上游 Writer 的论证结构。
 
 ## 配图 / 排版 / 草稿箱
 
@@ -144,7 +192,31 @@ references/layouts/guangyu-online.md
 canghe-article-illustrator
 ```
 
-医学配图继续遵守 `references/medical-constraints.md`：数据图只使用已核验数据并保留来源；机制图不得把推测画成已证实因果；产品/器械优先使用用户提供的官方素材，不让生成模型虚构官方产品资产。
+医学配图继续遵守 `references/medical-constraints.md`。
+
+涉及统计图、论文式 Figure、多面板图或用户提供论文图作为复杂度参考时，必须同时读取：
+
+```text
+references/medical-figure-design.md
+```
+
+最重要的 Figure Contract：
+
+```text
+current_article      决定画什么
+verified_sources     决定数字和医学结论能不能画
+visual_references    只决定复杂度 / Panel 密度 / 视觉语法
+```
+
+即：
+
+> **借复杂度，不借内容；借版式，不借证据。**
+
+生成 Figure 前，从当前冻结稿或最终 HTML 反推 Panel 内容；不要因为参考 Figure 里有弦图、年龄分层、季节曲线，就在当前文章没有这些内容或数据时照搬。
+
+数据图只使用已核验数据并保留来源；机制图不得把推测画成已证实因果；产品/器械优先使用用户提供的官方素材，不让生成模型虚构官方产品资产。
+
+若图像生成模型自动写错作者、期刊、DOI/PMID 或来源，优先移除图内错误来源文字，由正式 HTML 图注与 References 管理引用。
 
 ### 2. 排版路由
 
@@ -159,7 +231,8 @@ canghe-article-illustrator
 
 用户明确指定“光愈在线式”视觉
 → 先读取 references/layouts/guangyu-online.md
-→ xiaohu-wechat-format 负责 Markdown → 微信兼容 HTML
+→ 匹配点名参考文章的正文密度 / 标题密度 / Figure / Reference 语法
+→ xiaohu-wechat-format 负责 Markdown → 微信兼容 HTML（适用时）
 → 若需要高还原头像访谈卡，再调用 scripts/enhance_guangyu_dialogue.py
 ```
 
@@ -260,11 +333,12 @@ wechat-medical-writer
 只做表达/标题/节奏润色，不改变医学事实
         ↓
 （可选）canghe-article-illustrator
+若为论文式 Figure，读取 medical-figure-design.md
         ↓
 排版路由：
 ├─ 常规文章 → canghe-markdown-to-html
 ├─ 访谈/Q&A/组件化 → xiaohu-wechat-format
-└─ 光愈在线式头像访谈 → xiaohu → enhance_guangyu_dialogue.py
+└─ 光愈在线式 → 读取 guangyu-online.md；头像访谈再叠加本地 adapter
         ↓
 统一：canghe-post-to-wechat
         ↓
@@ -286,6 +360,7 @@ SKILL.md
 README.md
 references/domains/cervical-health.md
 references/medical-constraints.md
+references/medical-figure-design.md
 references/upstreams.md
 references/layouts/guangyu-online.md
 scripts/enhance_guangyu_dialogue.py
