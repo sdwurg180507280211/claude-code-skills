@@ -35,6 +35,9 @@
 - 当前已审计的 `xiaohu-wechat-format` `:::dialogue` 只支持“说话人文本 + 左右交替气泡”，没有头像/Logo 字段。其 README 声明 MIT，但 GitHub 元数据未识别许可证且仓库缺独立 `LICENSE` 文件，因此本仓库不得 vendor、复制脚本/主题或长期 fork，除非许可证文本明确。
 - 用户运行时提供公众号截图、HTML 或打包 ZIP 时，可以从真实 HTML 提炼**视觉画像**，但原始 HTML、图片、视频和 ZIP 不提交。视觉画像只记录跨样本稳定的颜色/尺寸/组件，不成为医学事实来源，也不取代 `content-research-writer` 的写作流程。
 - “光愈在线式”布局画像维护在 `skills/wechat-medical-writer/references/layouts/guangyu-online.md`。它不是固定文章模板；仅在用户明确要求相似视觉或样本确实匹配时读取。
+- `光愈在线` 仅是参考品牌，最终医学公众号输出默认属于 **“医荟她健康”**。生成或排版前读取 `skills/wechat-medical-writer/references/brands/yihui-she-health.md`，不得把光愈在线 Logo、名称、二维码、小程序、项目落款等带入医荟她健康成品。
+- `医荟她健康` 当前没有小程序。除非用户后续明确提供真实小程序名称、AppID、path、二维码、截图和已上线功能，否则不得生成小程序卡片、二维码、入口或把未来规划写成已上线能力。
+- 光愈在线首篇上线文章的图片化格式研究维护在 `skills/wechat-medical-writer/references/layouts/guangyu-launch-first-article.md`；它可用于借鉴 2.35:1 封面、9:16 主 KV、1080px 级正文图和“图片主导 + 少量富文本”的首篇发布节奏，但不能复制光愈在线业务内容。
 - 高还原头像访谈使用本地 `scripts/enhance_guangyu_dialogue.py`，它只能后处理 xiaohu 已生成的 `data-container` HTML，并接收运行时 speaker→头像/Logo 映射。不得让该脚本解析 Markdown、写医学内容、生成头像、下载用户样本、上传微信或成长为第二套 formatter。
 - `enhance_guangyu_dialogue.py` 的确定性转换必须保持离线测试。speaker 缺头像映射时必须明确失败，不能静默输出“有的带头像、有的不带”的半成品。测试只用合成 HTML 和虚拟路径，不提交真实品牌资产。
 - 头像/Logo 必须来自用户提供或用户有权使用的真实素材；不得生成或伪造真实专家头像、官方 Logo。运行时 `avatars.json`、头像、Logo、生成 HTML 均不提交仓库。
