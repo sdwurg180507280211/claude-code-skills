@@ -15,7 +15,11 @@
 可选：Viral Writer
 只做表达/标题/节奏润色，不改变医学事实
         ↓
-可选：canghe-article-illustrator
+按需配图：
+├─ 普通概念插图 → canghe-article-illustrator
+└─ 统计图 / 论文式 Figure / 多面板图
+   → references/medical-figure-design.md
+   → 可控 plotting / SVG / HTML / vector 优先
         ↓
 排版路由：
 ├─ 常规文章 → canghe-markdown-to-html
@@ -53,17 +57,45 @@ references/layouts/guangyu-online.md
 
 原始 HTML、图片、视频和 ZIP 不进入仓库。layout profile 只回答“怎么排”，不回答“怎么写”，也不是医学事实来源。
 
+## 医学 Figure
+
+统计图、论文式 Figure、多面板科学图与普通“正文插图”是两类任务，不走同一默认路由。
+
+### 普通概念插图
+
+可以按需使用 `canghe-article-illustrator` 或其他成熟插图工具。
+
+### 统计图 / 论文式 Figure / 多面板图
+
+必须读取：
+
+```text
+references/medical-figure-design.md
+```
+
+其中当前关键经验包括：
+
+- **借复杂度，不借内容；借版式，不借证据**；
+- Figure 复杂度既不能超过证据，也不应无故低于文章本身的信息密度；
+- 精确数字、坐标、表格、图例和专业文字优先使用可控 plotting / SVG / HTML / vector 锚定，生成模型不承担唯一的数据和文字层；
+- 两张以上高信息密度 Figure 应先做全文 placement map，避免连续多屏堆叠；必要时可以连同“最小支撑段落”一起移动，并增加前向提示与桥接句；
+- 中英文版本应视为同一 Figure 的本地化重绘，Caption 语言跟随目标场景，不再默认“英文 Figure caption + 中文图注”；
+- 图片底部已经有完整 Caption 时，HTML 不再重复同一段 Caption；
+- 论文 Figure 放进公众号后要按约 650～700px 正文宽度复核可读性。
+
 ## Upstream
 
 - 主 Writer：`content-research-writer`
 - 可选表达润色：`Viral Writer`
-- 配图/常规排版/发布：苍何 `canghe-article-illustrator`、`canghe-markdown-to-html`、`canghe-post-to-wechat`
+- 普通概念插图 / 常规排版 / 发布：苍何 `canghe-article-illustrator`、`canghe-markdown-to-html`、`canghe-post-to-wechat`
+- 统计图 / 论文式 Figure：`references/medical-figure-design.md` + 可控绘图工具优先
 - 高级访谈/Q&A/组件化排版：`xiaohuailabs/xiaohu-wechat-format`
 
 ### 常规文章
 
 ```text
-canghe-article-illustrator（按需）
+普通插图（按需）→ canghe-article-illustrator
+论文式 Figure（按需）→ medical-figure-design + controllable plotting
 → canghe-markdown-to-html
 → canghe-post-to-wechat
 ```
@@ -130,4 +162,4 @@ xiaohu README 声明 MIT，但当前仓库没有独立 `LICENSE` 文件且 GitHu
 
 原始医学 ZIP/PPT/PDF、公众号 HTML/图片/视频、头像、Logo、内部培训材料、未公开研究、患者资料和运行时文章都不进入公共仓库。
 
-本 Skill 保留领域定义、医学约束、布局画像、小型可测试品牌适配器和 upstream 编排；通用写作仍由 `content-research-writer` 负责，微信 formatter/publisher 仍优先复用现有 upstream。
+本 Skill 保留领域定义、医学约束、Figure 设计/插入/本地化规则、布局画像、小型可测试品牌适配器和 upstream 编排；通用写作仍由 `content-research-writer` 负责，微信 formatter/publisher 仍优先复用现有 upstream。
