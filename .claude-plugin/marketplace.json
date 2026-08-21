@@ -5,17 +5,18 @@
   },
   "metadata": {
     "description": "Personal collection of reusable Agent and Claude Code skills",
-    "version": "1.10.0"
+    "version": "1.11.0"
   },
   "plugins": [
     {
       "name": "development-skills",
-      "description": "Specification and local repository workflows",
+      "description": "Specification, repository, and Git history workflows",
       "source": "./",
       "strict": false,
       "skills": [
         "./skills/spec-mode",
-        "./skills/github-kb"
+        "./skills/github-kb",
+        "./skills/git-history-cleanup"
       ]
     },
     {

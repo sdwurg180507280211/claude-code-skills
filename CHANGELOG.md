@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-08-21 — v1.11.0
+
+### Added
+- `git-history-cleanup`：沉淀“最终代码不变、只整理 Git 历史”的安全工作流，覆盖冻结旧 HEAD/Tree、创建恢复分支、按最终净效果合并或删除提交、交互式 rebase 与最终 Tree 驱动重建两种策略，以及强推前后的 Tree SHA 等价校验。
+- 增加复杂历史与仅有 Git 托管 API 时的对象级重建规则：优先复用最终 blob/subtree、避免提前吸收后续改动、跳过 no-op commit，并在目标 ref 更新前手工实现 lease 语义。
+
+### Changed
+- `development-skills` bundle 增加 `git-history-cleanup`，Marketplace 版本更新为 `1.11.0`。
+- README 增加 Git 历史整理 Skill 的用途与目录入口。
+
 ## 2026-08-18 — v1.10.0
 
 ### Added

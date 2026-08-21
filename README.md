@@ -8,6 +8,7 @@
 |---|---|---|
 | [`spec-mode`](skills/spec-mode) | Development | 规格驱动开发：需求 → 设计 → 实现 |
 | [`github-kb`](skills/github-kb) | Development | 本地 GitHub 仓库知识库与检索 |
+| [`git-history-cleanup`](skills/git-history-cleanup) | Development | 在最终 Tree 不变的前提下安全压缩、清理并重写 Git 历史 |
 | [`github-aliyun-deploy`](skills/github-aliyun-deploy) | Infrastructure | GitHub → 阿里云 ECS 自动部署 |
 | [`china-proxy`](skills/china-proxy) | Infrastructure | 命令行访问受阻时探测并应用本地代理 |
 | [`wechat-account-bookmarks`](skills/wechat-account-bookmarks) | Utility | 微信公众号 → Edge / Chrome 主页或文章书签 |
@@ -97,6 +98,7 @@ my-skills/
 ├── skills/
 │   ├── china-proxy/
 │   ├── content-research-writer/
+│   ├── git-history-cleanup/
 │   ├── github-aliyun-deploy/
 │   ├── github-kb/
 │   ├── spec-mode/
