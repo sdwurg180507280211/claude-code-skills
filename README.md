@@ -16,6 +16,7 @@
 | [`wechat-ios-shortcuts`](skills/wechat-ios-shortcuts) | Utility | 名称 + URL → Apple Web Clip `.mobileconfig` → iPhone/iPad 主屏幕图标 |
 | [`content-research-writer`](skills/content-research-writer) | Utility | 上游 vendored：研究 → 大纲 → 引用 → 高质量文章；用于补足插件市场不可达的主 Writer |
 | [`wechat-medical-writer`](skills/wechat-medical-writer) | Utility | 医学领域上下文/资料约束 → 强制 handoff 给 `content-research-writer` → 按需配图/排版/发布；支持公众号样本布局画像与小型品牌适配器 |
+| [`wechat-ai-model-writer`](skills/wechat-ai-model-writer) | Utility | AI 模型/价格/免费额度/高性价比渠道情报 → 日报/重大更新/周报选题 → 价格与渠道核验 → 科技情报刊式公众号排版 |
 
 ## 安装
 
@@ -39,7 +40,7 @@ npx skills add sdwurg180507280211/my-skills
 /plugin install utility-skills@my-skills
 ```
 
-`utility-skills` 会同时安装 `content-research-writer` 与 `wechat-medical-writer`。
+`utility-skills` 会同时安装 `content-research-writer`、`wechat-medical-writer` 与 `wechat-ai-model-writer`。
 
 ### 手动安装单个 Skill
 
@@ -47,7 +48,7 @@ npx skills add sdwurg180507280211/my-skills
 cp -R skills/<skill-name> ~/.claude/skills/
 ```
 
-如果手动安装 `wechat-medical-writer`，同时复制 `skills/content-research-writer/`。
+如果手动安装 `wechat-medical-writer` 或 `wechat-ai-model-writer`，同时复制 `skills/content-research-writer/`。
 
 ### 公众号下游（按需）
 
@@ -69,6 +70,30 @@ pip3 install markdown requests
 ```
 
 本项目只使用它的 formatter；封面、配图和最终草稿箱发布仍优先走苍何。xiaohu README 声明 MIT，但仓库当前没有独立 `LICENSE` 文件，因此本仓库不 vendor 它。
+
+### AI 模型省钱公众号
+
+`wechat-ai-model-writer` 面向“AI模型省钱情报”一类素材，先把每日采集结果编辑成读者决策内容，而不是机械搬运新闻。默认路由：
+
+```text
+AI模型省钱情报
+→ 判断 daily / breaking / weekly
+→ 价格、免费额度、渠道与风险字段规范化
+→ content-research-writer
+→ 数据表 / 信息卡 / 微信 HTML
+→ 人工复核
+→ 发布
+```
+
+首版日报视觉与结构位于：
+
+```text
+skills/wechat-ai-model-writer/references/layouts/ai-savings-daily.md
+skills/wechat-ai-model-writer/templates/daily.md
+skills/wechat-ai-model-writer/templates/daily.html
+```
+
+重点使用结论卡、模型信息卡、价格对比表与风险卡，默认不依赖装饰性 AI 插画。
 
 ### “光愈在线式”公众号布局
 
@@ -105,6 +130,7 @@ my-skills/
 │   ├── wechat-account-bookmarks/
 │   ├── wechat-android-shortcuts/
 │   ├── wechat-ios-shortcuts/
+│   ├── wechat-ai-model-writer/
 │   └── wechat-medical-writer/
 ├── CHANGELOG.md
 ├── CLAUDE.md
@@ -124,11 +150,12 @@ GitHub Actions 会检查：Skill/frontmatter/Marketplace 结构、vendored upstr
 ## 维护原则
 
 - 优先成熟 upstream 和最简单实现；大型通用 upstream 默认不复制。
-- `content-research-writer` 是受控 vendored 例外；医学逻辑不得写进它。
+- `content-research-writer` 是受控 vendored 例外；医学逻辑与 AI 模型省钱逻辑都不得写进它。
 - 不提交 Cookie、Token、登录态、用户原始 ZIP/PPT/PDF/公众号 HTML、图片、视频、头像、Logo、患者资料或未公开研究。
 - 公众号样本可在运行时用于提炼视觉画像，但画像不能成为医学事实来源，也不能把单篇样稿固化成所有文章的写作模板。
 - `wechat-medical-writer` 保持薄编排：写作交给 `content-research-writer`；常规排版用苍何；复杂组件用 xiaohu；只对明确缺失的品牌视觉增加小型、离线可测试的后处理器；最终发布优先 `canghe-post-to-wechat`。
-- 微信浏览器书签、Android 真机自动化、iOS Web Clip 与医学内容编排保持独立，通过文件/数据契约松耦合。
+- `wechat-ai-model-writer` 只维护模型情报特有的选题路由、价格/免费额度/渠道风险约束和科技媒体排版；不复制通用研究写作，不把每日采集条目机械变成固定 5+2 新闻稿。
+- 微信浏览器书签、Android 真机自动化、iOS Web Clip 与公众号内容编排保持独立，通过文件/数据契约松耦合。
 
 ## License
 
