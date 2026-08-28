@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-28 — v1.12.0
+
+### Added
+- `wechat-ai-model-writer`：新增面向 AI 大模型/价格/免费额度/高性价比渠道的微信公众号编辑与编排 Skill，支持 `daily / breaking / weekly` 选题路由，并继续 handoff 给 `content-research-writer` 完成通用研究与正文写作。
+- `references/intelligence-contract.md`：沉淀价格单位、币种、缓存/Batch/套餐/活动价、永久免费层/新用户额度/限时免费、上下文、限速和官方/云平台/聚合/中转渠道分类的结构化输入契约。
+- `references/layouts/ai-savings-daily.md`、`templates/daily.md` 与 `templates/daily.html`：增加科技情报刊式日报视觉规范、内容骨架和微信 inline-style HTML 组件参考，优先使用结论卡、模型卡、价格表与风险卡，不依赖装饰性 AI 插图。
+
+### Changed
+- `utility-skills` bundle 增加 `wechat-ai-model-writer`，Marketplace 版本更新为 `1.12.0`。
+- README 与仓库维护规则增加 AI 模型公众号生产链、价格/渠道核验边界和数据视觉要求。
+
 ## 2026-08-21 — v1.11.0
 
 ### Added
@@ -40,7 +51,7 @@
 - `wechat-medical-writer` 增加排版路由：常规文章继续使用 `canghe-markdown-to-html`；组件化访谈文章可按需使用 `xiaohu-wechat-format`；最终发布统一优先交给 `canghe-post-to-wechat`。
 
 ### Changed
-- 明确 `xiaohu-wechat-format` 只负责高级排版，不使用其封面生成和 `publish.py`，避免与苍何配图/发布链重复。
+- 明确 `xiaohu-wechat-format` 只负责高级排版，不使用其封面生成和 `publish.py`，避免与苍何上游重复。
 - 明确当前 `:::dialogue` 原生实现没有头像 / Logo 字段，不能宣称开箱即用 1:1 复刻头像型专家访谈卡。
 - 由于该 upstream 虽在 README 声明 MIT，但 GitHub 元数据未识别许可证且仓库没有独立 `LICENSE` 文件，本仓库只记录和调用外部 upstream，不 vendor、不复制其脚本/主题。
 - Marketplace 版本更新为 `1.8.0`。
