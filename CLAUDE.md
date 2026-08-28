@@ -24,10 +24,14 @@
 - `wechat-android-shortcuts` 只负责 Android 真机上的微信“添加到桌面”自动化；使用 ADB + OCR 操作官方 UI，不修改微信数据库、不伪造 ShortcutInfo，不与其他微信 Skill 互相 import。
 - `wechat-ios-shortcuts` 只负责名称 + 已知 HTTP/HTTPS URL 到 Apple Web Clip `.mobileconfig` 的转换；不发现公众号、不控制微信 App、不静默安装配置描述文件。个人 iPhone/iPad 安装必须由用户确认，MDM 下发不属于当前实现。
 - `wechat-medical-writer` 是薄医学领域适配/编排层，不自己定义通用文章结构、标题方法、研究模式、固定模板或发布实现。用户医学 ZIP/PPT 只用于定义内容方向或作为当次资料。
-- 医学主题到成稿必须 handoff 给 `content-research-writer`。由于该 upstream 在用户可用的插件市场不可达，本仓库按 MIT License 将已审计版本 vendored 为独立 `skills/content-research-writer/` 并加入 `utility-skills` bundle；不得在该 vendored `SKILL.md` 中加入医学特有逻辑。
+- `wechat-ai-model-writer` 是 AI 模型性价比公众号的编辑/编排层。它只维护 daily / breaking / weekly 选题路由、模型价格与免费额度字段、官方/云平台/聚合/中转渠道分类、风险提示与科技情报刊式排版；不用于医学内容，也不得把每日采集条目机械拼成固定新闻列表。
+- AI 模型公开稿的价格、免费额度、上下文、限速与渠道信息优先回到官方公告、官方定价页或官方文档；标准按量价、缓存价、Batch 价、包月摊销价、新用户额度和限时活动不得混写。无法核实的价格必须明确标记，不能补造数字。
+- AI 模型渠道必须区分 `[官方]`、`[云平台官方接入]`、`[正规聚合平台]`、`[非官方中转]`；禁止推荐盗号、共享 API Key、来源不明密钥、绕过地区限制或明显违反服务条款的渠道。非官方中转即使便宜，也必须同时呈现数据隐私、稳定性、版本真实性、封号和跑路风险。
+- AI 模型日报的视觉优先级是“结论卡 / 数据表 / 模型信息卡 / 必要的数据图 > 装饰性 AI 插图”。没有可信数据时不得生成伪价格图、伪排行榜或模型主观评分雷达图。默认布局画像维护在 `skills/wechat-ai-model-writer/references/layouts/ai-savings-daily.md`。
+- 医学主题与 AI 模型主题到高质量正文都必须 handoff 给 `content-research-writer`。由于该 upstream 在用户可用的插件市场不可达，本仓库按 MIT License 将已审计版本 vendored 为独立 `skills/content-research-writer/` 并加入 `utility-skills` bundle；不得在该 vendored `SKILL.md` 中加入医学或 AI 模型省钱特有逻辑。
 - `content-research-writer` 的本地副本必须由 `UPSTREAM.lock.json` 锁定；`scripts/validate_skills.py` 会检查 Git blob 指纹，未同步更新 lock 的本地改动应直接失败。
-- 如果运行环境只安装了 `wechat-medical-writer` 而缺少 `content-research-writer`，应提示安装同仓库主 Writer，不得悄悄实现 fallback Writer。
-- Handoff 时把已知的主题、受众、目标、篇幅/形式、用户资料、参考样稿、风格要求和医学约束一次性传给主 Writer；已经知道的信息不要重复问。用户明确要求“一口气成稿”时，可让主 Writer 连续执行原生的大纲、研究、草稿、引用检查和最终润色步骤。
+- 如果运行环境只安装了 `wechat-medical-writer` 或 `wechat-ai-model-writer` 而缺少 `content-research-writer`，应提示安装同仓库主 Writer，不得悄悄实现 fallback Writer。
+- Handoff 时把已知的主题、受众、目标、篇幅/形式、用户资料、参考样稿、风格要求和领域约束一次性传给主 Writer；已经知道的信息不要重复问。用户明确要求“一口气成稿”时，可让主 Writer 连续执行原生的大纲、研究、草稿、引用检查和最终润色步骤。
 - 面向公开发布的医学文章，关键数字、指南/共识推荐、疗效/安全性、适应证、监管状态和可能影响临床判断的事实默认要求可追溯来源；正文引用与参考文献在交付前必须闭环。只有用户明确要求“仅按提供资料、不做外部核验”时才允许限制在用户来源，并在成稿中说明该边界。
 - `Viral Writer` 仅可作为用户明确要求时的可选表达润色层，不得修改或新增医学事实、数字、指南、适应证、监管状态或引用。
 - 苍何不是纯写作的前置依赖。用户要求正文配图时优先 `canghe-article-illustrator`；普通学术文章/常规公众号排版优先 `canghe-markdown-to-html`；最终草稿箱发布统一优先 `canghe-post-to-wechat`。
@@ -43,7 +47,7 @@
 - 头像/Logo 必须来自用户提供或用户有权使用的真实素材；不得生成或伪造真实专家头像、官方 Logo。运行时 `avatars.json`、头像、Logo、生成 HTML 均不提交仓库。
 - 继续提高“光愈在线式”还原度时，只按实际需求新增 `brand-follow`、`summary-chip`、`end-divider` 等独立微组件；不要预防性实现整套私有模板，也不要复制用户样本 HTML/SVG/图片。
 - 医学配图的数据只能来自已经核验的正文来源；不得补造数字，不得把机制推测画成确定因果，真实产品/器械/包装优先使用用户提供的官方素材。
-- 四个本仓库微信 Skill 保持独立，通过 Markdown、CSV/XLSX、`target_url` 等文件/数据契约松耦合，不直接互相 import。
+- 五个本仓库微信 Skill 保持独立，通过 Markdown、CSV/XLSX、`target_url`、结构化情报等文件/数据契约松耦合，不直接互相 import。
 - Android 脚本不得提交开发机绝对路径、固定设备 serial、固定用户输入法；设备和工具路径通过自动发现或环境变量提供，临时切换输入法后必须恢复运行前的默认输入法。
 - 医学 Skill 不得提交用户上传的原始 ZIP/PPT/PDF、公众号 HTML/图片/视频、头像/Logo、内部培训材料、患者资料或未公开研究。仓库只保存领域 taxonomy、必要医学约束、布局画像、小型确定性适配器和 upstream 编排说明。
 - 用户提供的优秀公众号文章可以作为结构/文风/信息密度参考，但其医学结论和参考文献不能因为出现在样稿中就自动视为已核验事实；也不得把样稿结构固化为永久模板。
