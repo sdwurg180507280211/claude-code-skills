@@ -322,6 +322,8 @@ canghe-post-to-wechat
 
 无论 HTML 来自 `canghe-markdown-to-html`、`xiaohu-wechat-format`，还是在 xiaohu HTML 上经过本地品牌适配，最终都优先交给苍何发布，不同时维护两套草稿箱上传逻辑。
 
+公众号草稿有独立的标题字段，成稿正文的 HTML 里不要再放 `<h1>` 大标题，避免草稿里标题重复；副题、引言行这类非标题元素可以保留。
+
 ### Downstream preflight
 
 如果用户只要求研究或写文章，不要求任何排版/发布 upstream。
